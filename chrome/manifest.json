@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+
+  "name": "Promises Debugger",
+  "description": "",
+  "version": "1.0",
+
+  "permissions": [
+    "tabs",
+    "storage",
+    "activeTab",
+    "webNavigation",
+    "http://*/",
+    "https://*/"
+  ],
+  "devtools_page": "devtools.html",
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  }
+}

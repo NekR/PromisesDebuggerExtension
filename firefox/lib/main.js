@@ -1,0 +1,287 @@
+const {Cc, Ci, Cu, Cr} = require("chrome");
+const self = require("sdk/self");
+  
+const { gDevTools } = Cu.import("resource:///modules/devtools/gDevTools.jsm", {});
+const { DevToolsUtils } = Cu.import("resource://gre/modules/devtools/DevToolsUtils.jsm", {});
+const devtools = Cu.import("resource://gre/modules/devtools/Loader.jsm", {}).devtools;
+
+const events = require("sdk/event/core");
+const {on, once, off, emit} = events;
+const {setTimeout, clearTimeout} = require('sdk/timers');
+const {readURI} = require('sdk/net/url');
+
+
+console.log('Start');
+
+var getDesc = Object.getOwnPropertyDescriptor;
+
+var log = {
+  prefix: '[PromisesDebugger]:',
+  warn: function(...args) {
+    args.unshift(this.prefix);
+    console.warn(...args);
+  }
+};
+
+var wrapPromises = function(contentWindow, unwrappedWindow, toolbox) {
+  let PromiseDescriptor = getDesc(unwrappedWindow, 'Promise');
+
+  console.log(PromiseDescriptor);
+  console.log('bind values');
+
+  unwrappedWindow.Z = function() {
+    this.test = 1;
+  };
+
+  var PromiseProxy =  new Proxy(unwrappedWindow.Promise, {
+    construct: function(Promise, args) {
+      console.log('Construct Promise:', arguments);
+
+      return new Promise(args[0]);
+    }
+  });
+
+  Object.defineProperty(unwrappedWindow, 'Promise', {
+    value: PromiseProxy,
+    // if false we cannot override
+    configurable: true,
+    writable: PromiseDescriptor.writable,
+    enumerable: PromiseDescriptor.enumerable
+  });
+};
+
+var buildProgressQI = function(obj) {
+  // obj.QueryInterface = XPCOMUtils.generateQI(["nsIWebProgressListener", "nsISupportsWeakReference"]),
+  obj.QueryInterface = function(aIID) {
+    if (
+      aIID.equals(Ci.nsIWebProgressListener) ||
+      aIID.equals(Ci.nsISupportsWeakReference) ||
+      aIID.equals(Ci.nsIXULBrowserWindow) ||
+      aIID.equals(Ci.nsISupports)
+    ) {
+      return this;
+    }
+
+    throw Cr.NS_NOINTERFACE;
+  }
+
+  return obj;
+};
+
+var buildProgressListener = function(obj, methods) {
+  var listener = buildProgressQI({});
+
+  Object.keys(methods).forEach((key) => {
+    listener[key] = methods[key].bind(obj);
+  });
+
+  return listener;
+};
+
+let promisesBackendCode;
+
+readURI(self.data.url('shared/promises-backend.js'))
+  .then(function(code) {
+    promisesBackendCode = code;
+  });
+
+var PromisesPanel = function(window, toolbox) {
+  this.toolbox = toolbox;
+  this.panelWindow = window;
+  this.target = toolbox.target;
+  this.webProgress = this.target.tab.linkedBrowser.webProgress;
+  // this.inspectedWindow = this.webProgress.DOMWindow;
+
+
+  this.waitUICommands();
+
+  if (this.isDebuggerAttached()) {
+    this.UIAction('show_not_attached');
+  } else {
+    this.waitAttachRequest();
+  }
+};
+
+PromisesPanel.prototype = {
+  get inspectedWindow() {
+    return this.webProgress.DOMWindow;
+  },
+  isDebuggerAttached: function() {
+    return !!this.inspectedWindow.__PromisesDebuggerAttached__;
+  },
+  attachToTarget: function() {
+    if (this.isDebuggerAttached()) return;
+
+    var inspectedWindow = this.inspectedWindow;
+
+    inspectedWindow.__PromisesDebuggerAttached__ = true;
+
+    // here promisesBackendCode must be present
+    // if it's possible need to 'then' promise and add
+    // destroy handle to toolbox
+    if (!promisesBackendCode) {
+      log.warn('<promisesBackendCode> is not present');
+      return;
+    }
+
+    inspectedWindow.eval(promisesBackendCode);
+  },
+  startWaitReloads: function() {
+    let webProgress = this.webProgress;
+
+    // not really need buildListener with arrow functions
+    this.progressListener = buildProgressListener(this, {
+      onLocationChange: (aWebProgress, aRequest, aLocationURI, aFlags) => {
+        if (aFlags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT |
+            aFlags & Ci.nsIWebProgressListener.LOCATION_CHANGE_ERROR_PAGE) {
+          return;
+        }
+
+        this.onReload()
+      }
+    });
+    
+    webProgress.addProgressListener(
+      this.progressListener,
+      webProgress.NOTIFY_STATE_WINDOW | webProgress.NOTIFY_LOCATION
+    );
+  },
+  stopWaitReloads: function() {
+    let webProgress = this.webProgress;
+
+    if (this.progressListener) {
+      webProgress.removeProgressListener(this.progressListener);
+      this.progressListener = null;
+    }
+  },
+  startWatchBackend: function() {
+    this.backendWatchListener = (e) => {
+      var data = e.data;
+
+      if (data && data.PromisesDebugger) {
+        // console.log('PromisesDebugger:UpdateData');
+
+        this.UIAction('update_data', data.message);
+      }
+    };
+
+    this.inspectedWindow.addEventListener('message', this.backendWatchListener);
+  },
+  stopWatchBackend: function() {
+    this.inspectedWindow.removeEventListener('message', this.backendWatchListener);
+  },
+  UIAction: function(action, message) {
+    this.panelWindow.postMessage({
+      action: action,
+      message: message
+    }, '*');
+  },
+  waitAttachRequest: function() {
+    // XXX change to show_need_attach
+    this.UIAction('show_need_reload');
+  },
+  waitUICommands: function() {
+    var serviceActions = {
+      attach: () => {
+        this.startWaitReloads();
+
+        this.onReload();
+      },
+      reload_and_attach: () => {
+        this.startWaitReloads();
+
+        this.inspectedWindow.location.reload();
+      },
+      open_resource: (message) => {
+        var toolbox = this.toolbox;
+        const WAIT_LIMIT = 5000;
+
+        toolbox.selectTool('jsdebugger').then(function(Debugger) {
+          let perform = () => {
+            let DebuggerView = Debugger._view;
+            let waiting = 0;
+
+            if (DebuggerView.Sources.containsValue(message.file)) {
+              DebuggerView.setEditorLocation(message.file, +message.line, {
+                align: 'center'
+              });
+            } else if (waiting < WAIT_LIMIT) {
+              waiting += 70;
+              setTimeout(perform, 70);
+            }
+          };
+
+          if (Debugger.isReady) {
+            perform();
+          } else {
+            toolbox.on('jsdebugger-ready', perform);
+          }
+        });
+      },
+      detach: () => {
+        this.stopWaitReloads();
+        this.stopWatchBackend();
+      }
+    };
+
+    this.panelWindow.addEventListener('message', function(e) {
+      var data = e.data;
+
+      // console.log('got service action', data);
+
+      if (data && data.serviceAction &&
+        serviceActions.hasOwnProperty(data.serviceAction)
+      ) {
+        serviceActions[data.serviceAction](data.message);
+      }
+    });
+  },
+
+  onReload: function() {
+    this.UIAction('show_main');
+    this.UIAction('reload');
+
+    this.attachToTarget();
+    this.startWatchBackend();
+  },
+
+  get target() {
+    return this.toolbox.target;
+  },
+  destroy: function() {
+    this.stopWaitReloads();
+    this.stopWatchBackend();
+  }
+};
+
+//  DebuggerView.setEditorLocation(where.url, where.line);
+// selectFrame: function(aDepth) {
+// DebuggerView.updateEditor
+// Debugger._view.setEditorLocation();
+
+gDevTools.on('promises-destroy', function() {
+  console.log('promises-destroy');
+});
+
+
+gDevTools.registerTool({
+  id: 'promises',
+  url: self.data.url('shared/promises-panel.html'),
+  label: 'Promises',
+  tooltip: 'Promises Debugger',
+  icon: self.data.url("icon-16.png"),
+  isTargetSupported: target => target.isLocalTab,
+  build: (window, toolbox) => {
+    toolbox.on('destroy', function() {
+      console.log('toolbox destroy');
+    });
+
+    return new PromisesPanel(window, toolbox);
+  }
+});
+
+// toolbox target.client and target.from for Front cunstructors
+
+// front for actor
+
+// victorporof 

@@ -1,0 +1,3 @@
+$(function() {
+  $('[data-popup]').popup();
+});

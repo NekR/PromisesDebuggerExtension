@@ -1,0 +1,533 @@
+html,
+body {
+	font-size: 15px;
+}
+
+body {
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	font-family: "Open Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+	overflow-y: scroll;
+}
+
+#promises-table {
+	/*table-layout: fixed;*/
+}
+
+#head {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 9999;
+}
+
+#content {
+	padding-top: 74px;
+}
+
+#need-reload {
+	padding-top: 74px;
+}
+
+.attach-toggle {
+	display: inline-block;
+	height: 20px;
+	width: 40px;
+	background: rgb(196, 196, 196);
+	vertical-align: middle;
+	margin-left: 20px;
+	border-radius: 10px;
+	cursor: pointer;
+	box-shadow: inset 0 0 5px 0px rgba(0, 0, 0, 0.3);
+}
+
+@-moz-document url-prefix() { 
+	.attach-toggle {
+		box-shadow: inset 0 0 5px -1px rgba(0, 0, 0, 0.3);
+	}
+}
+
+.attach-toggle[selected] .attach-toggle-ball {
+	transform: translateX(0);
+	background-color: rgb(211, 89, 89);
+	box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.attach-toggle-ball {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+
+	transform: translateX(20px);
+	background-color: rgb(211, 210, 210);
+	box-shadow: 0 0 3px 0px rgba(0, 0, 0, 0.3);
+
+	transition: background-color 0.3s, transform 0.3s;
+}
+
+.pd-table-cell {
+	cursor: default;
+}
+
+.pd-table-cell-header {
+	background-color: #f0f0f0 !important;
+}
+
+.pd-show-error {
+	cursor: pointer;
+	width: 100%;
+}
+
+.cell-id {
+	text-align: center;
+}
+
+.resource-link {
+	font-size: 13px;
+	color: #333;
+	text-decoration: underline;
+}
+
+.primitive-value {
+	word-wrap: nowrap;
+	overflow-wrap: nowrap;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.json-value {
+	max-height: 100px;
+	overflow: hidden;
+}
+
+
+.pd-promise-chain {
+	border-left: 1px solid black;
+	padding-left: 10px;
+	margin-top: 10px;
+
+}
+
+.pd-promise-chain-item {
+	position: relative;
+}
+
+.pd-promise-chain-item::before {
+	content: '';
+	height: 1px;
+	background-color: black;
+	position: absolute;
+	top: 50%;
+	left: -10px;
+	width: 10px;
+	margin-top: -0.5px;
+}
+
+
+
+
+
+
+
+
+
+
+
+/* ####################### Table ###################### */
+
+
+/* Prototype */
+.pd-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+/* Table Content */
+.pd-table-cell,
+.pd-table-cell-header {
+	border-collapse: collapse;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-ms-box-sizing: border-box;
+	box-sizing: border-box;
+	-webkit-transition: all 0.1s ease-out;
+	-moz-transition: all 0.1s ease-out;
+	transition: all 0.1s ease-out;
+
+	flex-grow: 2;
+	width: 25%;
+	display: flex;
+	align-items: center;
+}
+
+.pd-table-cell:nth-child(1),
+.pd-table-cell-header:nth-child(1) {
+	width: 50px;
+	/*padding-right: 0;
+	padding-left: 0;*/
+	justify-content: center;
+}
+
+.pd-table-cell:nth-child(2),
+.pd-table-cell-header:nth-child(2) {
+	flex-grow: 3;
+	width: 40%;
+}
+
+.pd-table-cell:nth-child(3),
+.pd-table-cell-header:nth-child(3) {
+	flex-grow: 1;
+	width: 15%;
+	justify-content: center;
+}
+
+.pd-table-cell:nth-child(4),
+.pd-table-cell-header:nth-child(4) {
+	flex-grow: 4;
+	width: 40%;
+}
+
+.pd-table-cell:nth-child(5),
+.pd-table-cell-header:nth-child(5) {
+	width: 70px;
+	/*padding-right: 0;
+	padding-left: 0;*/
+	justify-content: center;
+}
+
+/* Headers */
+.pd-table-head {
+	// border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.pd-table-foot .pd-table-cell {
+	background-color: rgba(0, 0, 0, 0.03);
+}
+
+.pd-table-cell-header {
+	cursor: auto;
+	background-color: rgba(0, 0, 0, 0.05);
+	text-align: left;
+	color: rgba(0, 0, 0, 0.8);
+	padding: 0.5em 0.7em;
+	vertical-align: middle;
+	font-weight: bold;
+}
+.pd-table-head .pd-table-cell-header:first-child {
+	border-radius: 5px 0px 0px 0px;
+}
+
+.pd-table-head .pd-table-cell-header:last-child {
+	border-radius: 0px 5px 0px 0px;
+}
+
+.pd-table-foot .pd-table-cell-header:first-child {
+	border-radius: 0px 0px 0px 5px;
+}
+
+.pd-table-foot .pd-table-cell-header:last-child {
+	border-radius: 0px 0px 5px 0px;
+}
+
+.pd-table-foot .pd-table-cell-header:only-child {
+	border-radius: 0px 0px 5px 5px;
+}
+/* Table Cells */
+.pd-table-cell {
+	padding: 0.40em 0.7em;
+	vertical-align: middle;
+}
+/* Footer */
+.pd-table-foot {
+	border-top: 1px solid rgba(0, 0, 0, 0.03);
+}
+.pd-table-foot .pd-table-cell-header {
+	font-weight: normal;
+	font-style: italic;
+}
+/* Table Striping */
+.pd-table .pd-table-body .pd-table-cell-header:nth-child(2n) {
+	background-color: rgba(0, 0, 50, 0.02);
+}
+/* Icons */
+.pd-table  .icon {
+	vertical-align: baseline;
+}
+.pd-table .icon:only-child {
+	margin: 0em;
+}
+/* Table Segment */
+.pd-table.segment:after {
+	display: none;
+}
+.pd-table.segment.stacked:after {
+	display: block;
+}
+
+/*******************************
+						 States
+*******************************/
+/*--------------
+			Hover
+---------------*/
+/* Sortable */
+.pd-table.sortable .pd-table-cell-header.disabled:hover {
+	cursor: auto;
+	text-align: left;
+	font-weight: bold;
+	color: #333333;
+	color: rgba(0, 0, 0, 0.8);
+}
+.pd-table.sortable .pd-table-head .pd-table-cell-header:hover {
+	background-color: rgba(0, 0, 0, 0.13);
+	color: rgba(0, 0, 0, 0.8);
+}
+/* Inverted Sortable */
+.ui.inverted.sortable.table .pd-table-head .pd-table-cell-header:hover {
+	background-color: rgba(255, 255, 255, 0.13);
+	color: #ffffff;
+}
+/*--------------
+		Positive
+---------------*/
+.pd-table .pd-table-row-cont.positive,
+.pd-table .pd-table-cell.positive {
+	-webkit-box-shadow: 2px 0px 0px #119000 inset;
+	box-shadow: 2px 0px 0px #119000 inset;
+}
+.pd-table .pd-table-row-cont.positive .pd-table-cell,
+.pd-table .pd-table-cell.positive {
+	background-color: #F2F8F0 !important;
+	color: #119000 !important;
+}
+.pd-table.celled .pd-table-row-cont.positive:hover .pd-table-cell,
+.pd-table.celled .pd-table-row-cont:hover .pd-table-cell.positive,
+.pd-table .pd-table-row-cont.positive:hover .pd-table-cell,
+.pd-table .pd-table-cell:hover.positive,
+.pd-table .pd-table-cell-header:hover.positive {
+	background-color: #ECF5E9 !important;
+	color: #119000 !important;
+}
+/*--------------
+		 Negative
+---------------*/
+.pd-table .pd-table-row-cont.negative,
+.pd-table .pd-table-cell.negative {
+	-webkit-box-shadow: 2px 0px 0px #CD2929 inset;
+	box-shadow: 2px 0px 0px #CD2929 inset;
+}
+.pd-table .pd-table-row-cont.negative .pd-table-cell,
+.pd-table .pd-table-cell.negative {
+	background-color: #F9F4F4;
+	color: #CD2929 !important;
+}
+.pd-table.celled .pd-table-row-cont.negative:hover .pd-table-cell,
+.pd-table.celled .pd-table-row-cont:hover .pd-table-cell.negative,
+.pd-table .pd-table-row-cont.negative:hover .pd-table-cell,
+.pd-table .pd-table-cell:hover.negative,
+.pd-table .pd-table-cell-header:hover.negative {
+	background-color: #F2E8E8;
+	color: #CD2929;
+}
+/*--------------
+			Error
+---------------*/
+.pd-table .pd-table-row-cont.error,
+.pd-table .pd-table-cell.error {
+	-webkit-box-shadow: 2px 0px 0px #CD2929 inset;
+	box-shadow: 2px 0px 0px #CD2929 inset;
+}
+.pd-table .pd-table-row-cont.error .pd-table-cell,
+.pd-table .pd-table-cell.error,
+.pd-table .pd-table-cell-header.error {
+	background-color: #F9F4F4;
+	color: #CD2929;
+}
+.pd-table.celled .pd-table-row-cont.error:hover .pd-table-cell,
+.pd-table.celled .pd-table-row-cont:hover .pd-table-cell.error,
+.pd-table .pd-table-row-cont.error:hover .pd-table-cell,
+.pd-table .pd-table-cell:hover.error,
+.pd-table .pd-table-cell-header:hover.error {
+	background-color: #F2E8E8;
+	color: #CD2929;
+}
+/*--------------
+		 Warning
+---------------*/
+.pd-table .pd-table-row-cont.warning,
+.pd-table .pd-table-cell.warning {
+	-webkit-box-shadow: 2px 0px 0px #7D6C00 inset;
+	box-shadow: 2px 0px 0px #7D6C00 inset;
+}
+.pd-table .pd-table-row-cont.warning .pd-table-cell,
+.pd-table .pd-table-cell.warning,
+.pd-table .pd-table-cell-header.warning {
+	background-color: #FBF6E9;
+	color: #7D6C00;
+}
+.pd-table.celled .pd-table-row-cont.warning:hover .pd-table-cell,
+.pd-table.celled .pd-table-row-cont:hover .pd-table-cell.warning,
+.pd-table .pd-table-row-cont.warning:hover .pd-table-cell,
+.pd-table .pd-table-cell:hover.warning,
+.pd-table .pd-table-cell-header:hover.warning {
+	background-color: #F3EDDC;
+	color: #7D6C00;
+}
+/*--------------
+		 Active
+---------------*/
+.pd-table .pd-table-row-cont.active,
+.pd-table .pd-table-cell.active {
+	-webkit-box-shadow: 2px 0px 0px rgba(50, 50, 50, 0.9) inset;
+	box-shadow: 2px 0px 0px rgba(50, 50, 50, 0.9) inset;
+}
+.pd-table .pd-table-row-cont.active .pd-table-cell,
+.pd-table .pd-table-row-cont .pd-table-cell.active {
+	background-color: #E0E0E0;
+	color: rgba(50, 50, 50, 0.9);
+	/* border-color: rgba(0, 0, 0, 0.15) !important; */
+}
+/*--------------
+		 Disabled
+---------------*/
+.pd-table .pd-table-row-cont.disabled .pd-table-cell,
+.pd-table .pd-table-row-cont .pd-table-cell.disabled,
+.pd-table .pd-table-row-cont.disabled:hover .pd-table-cell,
+.pd-table .pd-table-row-cont:hover .pd-table-cell.disabled {
+	color: rgba(150, 150, 150, 0.3);
+}
+/*******************************
+					Variations
+*******************************/
+/*--------------
+		 Celled
+---------------*/
+.pd-table.celled {
+	color: rgba(0, 0, 0, 0.8);
+}
+.pd-table.celled .pd-table-body .pd-table-row-cont,
+.pd-table.celled .pd-table-foot .pd-table-row-cont {
+	border: none;
+}
+.pd-table.celled .pd-table-cell-header,
+.pd-table.celled .pd-table-cell {
+	border: 1px solid rgba(0, 0, 0, 0.1);
+}
+/* Coupling with segment */
+.pd-table.celled.segment .pd-table-cell-header:first-child,
+.pd-table.celled.segment .pd-table-cell:first-child {
+	border-left: none;
+}
+.pd-table.celled.segment .pd-table-cell-header:last-child,
+.pd-table.celled.segment .pd-table-cell:last-child {
+	border-right: none;
+}
+/*--------------
+		Sortable
+---------------*/
+.pd-table.sortable .pd-table-head .pd-table-cell-header {
+	cursor: pointer;
+	white-space: nowrap;
+}
+.pd-table.sortable .pd-table-head .pd-table-cell-header.sorted,
+.pd-table.sortable .pd-table-head .pd-table-cell-header.sorted:hover {
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+.pd-table.sortable .pd-table-head .pd-table-cell-header:after {
+	display: inline-block;
+	content: '';
+	width: 1em;
+	opacity: 0.8;
+	margin: 0em 0em 0em 0.5em;
+	font-family: 'Icons';
+	font-style: normal;
+	font-weight: normal;
+	text-decoration: inherit;
+}
+.pd-table.sortable .pd-table-head .pd-table-cell-header.ascending:after {
+	content: '\25b4';
+}
+.pd-table.sortable .pd-table-head .pd-table-cell-header.descending:after {
+	content: '\25be';
+}
+/*--------------
+		Inverted
+---------------*/
+/* Text Color */
+.pd-table.inverted .pd-table-cell {
+	color: rgba(255, 255, 255, 0.9);
+}
+.pd-table.inverted .pd-table-cell-header {
+	background-color: rgba(0, 0, 0, 0.15);
+	color: rgba(255, 255, 255, 0.9);
+}
+/* Stripes */
+.pd-table.inverted .pd-table-body .pd-table-row-cont:nth-child(2n) {
+	background-color: rgba(255, 255, 255, 0.06);
+}
+/*--------------
+	 Definition
+---------------*/
+.pd-table.definition .pd-table-cell:first-child {
+	font-weight: bold;
+}
+/*--------------
+	 Collapsing
+---------------*/
+.pd-table.collapsing {
+	width: auto;
+}
+/*--------------
+			Basic
+---------------*/
+.pd-table.basic .pd-table-cell-header {
+	background-color: transparent;
+	padding: 0.5em;
+}
+.pd-table.basic .pd-table-body .pd-table-row-cont {
+	border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+.pd-table.basic .pd-table-cell {
+	padding: 0.8em 0.5em;
+}
+.pd-table.basic .pd-table-body .pd-table-row-cont:nth-child(2n) {
+	background-color: transparent !important;
+}
+/*--------------
+		 Padded
+---------------*/
+.pd-table.padded .pd-table-cell-header,
+.pd-table.padded .pd-table-cell {
+	padding: 0.8em 1em;
+}
+.pd-table.compact .pd-table-cell-header {
+	padding: 0.3em 0.5em;
+}
+.pd-table.compact .pd-table-cell {
+	padding: 0.2em 0.5em;
+}
+/*--------------
+			Sizes
+---------------*/
+/* Small */
+.pd-table.small {
+	font-size: 0.875em;
+}
+/* Standard */
+.pd-table {
+	font-size: 1em;
+}
+/* Large */
+.pd-table.large {
+	font-size: 1.1em;
+}
+
+.pd-table-row-cont {
+	display: flex;
+}

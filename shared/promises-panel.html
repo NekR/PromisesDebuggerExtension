@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<link rel="stylesheet" href="css/style.css">
+		<link rel="stylesheet" href="ui/css/semantic.css">
+	</head>
+	<body>
+		<div id="main">
+			<div id="head">
+				<h4 class="ui top black attached header">
+					<div style="float: right;">
+						<i class="ban circle icon link"
+							title="Clear"
+							id="clear"
+							role="button"
+						></i>
+					</div>
+					Promises Debugger
+					<div class="attach-toggle"
+						role="button"
+						id="toggle-attach"
+						selected
+					>
+						<div class="attach-toggle-ball"></div>
+					</div>
+				</h4>
+				<div class="pd-table celled">
+					<div class="pd-table-head">
+						<div class="pd-table-row">
+							<div class="pd-table-row-cont">
+								<div class="pd-table-cell-header">ID</div>
+								<div class="pd-table-cell-header">Promise</div>
+								<div class="pd-table-cell-header">Status</div>
+								<div class="pd-table-cell-header">Value</div>
+								<div class="pd-table-cell-header">Chain</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="need-reload" hidden>
+				<div class="ui warning message">
+					<!-- <div class="ui segment vertical">
+						<div class="header">
+							Please reload page to capture Promises
+						</div>
+					</div> -->
+					<div class="ui segment vertical">
+						<div class="primary ui button small"
+							role="button"
+							id="reload"
+						>Start Watch & Reload page</div>
+
+						<div class="primary ui button small"
+							role="button"
+							id="attach"
+						>Start Watch</div>
+					</div>
+				</div>
+			</div>
+			<div id="content" hidden>
+				<div class="pd-table celled" id="promises-table">
+					<div class="pd-table-body" class="tbody-erros"></div>
+					<div class="pd-table-body" class="tbody-chaing-errors"></div>
+					<div class="pd-table-body" class="tbody-pending"></div>
+					<div class="pd-table-body" class="tbody-success"></div>
+				</div>
+			</div>
+		</div>
+		<script src="ui/jquery-2.1.1.min.js"></script>
+		<script src="ui/javascript/semantic.js"></script>
+		<script src="promises-panel.js"></script>
+		<script src="js/panel-ui.js"></script>
+	</body>
+</html>
