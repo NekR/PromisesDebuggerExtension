@@ -9,6 +9,7 @@ body {
 	height: 100%;
 	font-family: "Open Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
 	overflow-y: scroll;
+	background: #f0f0f0;
 }
 
 #promises-table {
@@ -127,7 +128,9 @@ body {
 }
 
 
-
+.pd-table-body {
+	margin-bottom: 10px;
+}
 
 
 

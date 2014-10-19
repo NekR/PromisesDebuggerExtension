@@ -434,7 +434,9 @@
           row.value.textContent = 'none'
           // row.chain.textContent = promiseRecord.chaingLength;
 
-          // prepend(tbodyPending, row.item);
+          if (topLevel) {
+            prepend(tbodyPending, row.item);
+          }
         }; break;
         case 'value': {
           var promise = promises[data.id];
