@@ -469,26 +469,4 @@ console.log('PromisesDebugger inside');
   };
 
   window.PromisesDebugger = PromisesDebugger;
-
-  function template(str, fn) {
-    if (str.nodeType) {
-      return template(str.innerHTML);
-    } else {
-      str = str.replace(/\\&(?:[a-zA-Z]+?);/gi, '\\$&')
-            .replace(/[\r\t\n]/g, " ")
-            .split("<%").join("\t")
-            .replace(/((^|%>)[^\t]*)'/g, "$1\r")
-            .replace(/\t=(.*?)%>/g, "',$1,'")
-            .split("\t").join("');")
-            .split("%>").join("p.push('")
-            .split("\r").join("\\'");
-
-      fn = new Function("var p=[],print=function(){p.push.apply(p,arguments);};" +
-        "with(this){p.push('" + str + "');}return p.join('');");
-    };
-
-    return function(data) {
-      return fn.call(data);
-    };
-  }
 }(this));
