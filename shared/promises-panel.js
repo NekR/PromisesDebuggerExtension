@@ -95,6 +95,13 @@
       extend.currentBlock = null;
     }
   },
+  checkTbody = function(tbody) {
+    if (tbody.childElementCount) {
+      tbody.hidden = false;
+    } else {
+      tbody.hidden = true;
+    }
+  },
   parseAndGerRerouceLink = function(input) {
     var R_URL = /((?:\w+?\:\/\/)[\s\S]*?):(\d+):(\d+)/g;
     var R_FX_ANONYMOUR_URL = /((?:\w+?\:\/\/)[\s\S]*?) line (\d+) > (?:[\s\S]*)/g;
@@ -260,7 +267,7 @@
 
   var table = document.getElementById('promises-table'),
     tBodies = table.querySelectorAll('.pd-table-body'),
-    tbodyErrors = table.querySelector('.tbody-erros'),
+    tbodyErrors = table.querySelector('.tbody-errors'),
     tbodyChainErrors = table.querySelector('.tbody-chain-errors'),
     tbodyPending = table.querySelector('.tbody-pending'),
     tbodySuccess = table.querySelector('.tbody-success');
@@ -436,6 +443,7 @@
 
           // if (topLevel) {
             prepend(tbodyPending, row.item);
+            checkTbody(tbodyPending);
           // }
         }; break;
         case 'value': {
@@ -449,6 +457,7 @@
 
             if (promise.topLevel) {
               prepend(tbodyErrors, promise.row.item);
+              checkTbody(tbodyErrors);
             } else {
               var topLevelParent = getTopLevelParent(promise);
 
@@ -456,17 +465,23 @@
                 topLevelParent.row.cont.classList.remove('positive');
                 topLevelParent.row.cont.classList.add('warning');
                 prepend(tbodyChainErrors, topLevelParent.row.item);
+                checkTbody(tbodyChainErrors);
               }
             }
           } else {
             promise.row.cont.classList.add('positive');
             promise.row.status.textContent = 'fullfiled';
-            promise.topLevel && prepend(tbodySuccess, promise.row.item);
+
+            if (promise.topLevel) {
+              prepend(tbodySuccess, promise.row.item);
+              checkTbody(tbodySuccess);
+            }
           }
 
           if (!promise.topLevel) {
             try {
               tbodyPending.removeChild(promise.row.item);
+              checkTbody(tbodyPending);
             } catch (e) {}
           }
 
