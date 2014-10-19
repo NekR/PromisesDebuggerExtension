@@ -25,6 +25,7 @@ console.log('PromisesDebugger inside');
     topLevel: [],
     diffs: [],
     promiseToRecord: new WeakMap(),
+    promiseByProxy: new WeakMap(),
     nextId: 0,
 
     get: function(promise) {
@@ -153,102 +154,12 @@ console.log('PromisesDebugger inside');
         registeredData.setValue(params.value);
       }
 
-      this.wrapMethods(promise, registeredData);
+      // wrapMethods(promise, registeredData);
       this.promiseToRecord.set(promise, registeredData);
 
       promise.__recordData__ = registeredData;
 
       return registeredData;
-    },
-    wrapMethods: function(promise, registeredData) {
-      var originalThen = recurciveGetDesc(promise, 'then'),
-        originalCatch = recurciveGetDesc(promise, 'catch')
-
-      registeredData.originalThen = originalThen;
-      registeredData.originalCatch = originalCatch;
-
-      promise.then = function(onResolve, onReject) {
-        // 2 ways to handle 'then'
-        // wrap call to try..catch
-        // or add chaining then()
-
-        var resolve = function(val) {
-          chaingRegistered.setValue({
-            type: 'value',
-            value: val
-          });
-
-          return val;
-        },
-        reject = function(val) {
-          chaingRegistered.setValue({
-            type: 'error',
-            value: val
-          });
-
-          return val;
-        };
-
-        var result = originalThen.value.call(this, function onResolveWrap(val) {
-          // resolve(val); // ?
-
-          if (typeof onResolve === 'function') {
-            return onResolve.call(this, val);
-          }
-        }, function onRejectWrap(val) {
-          // reject(val); // ?
-
-          if (typeof onReject === 'function') {
-            return onReject.call(this, val);
-          }
-        })/*.then(resolve, reject)*/,
-        stack;
-
-        try {
-          throw new Error();
-        } catch (e) {
-          stack = e.stack;
-        }
-
-        // recurciveGetDesc(result, 'then').value.call(result, resolve, reject);
-        result.then(resolve, reject);
-
-        var chaingRegistered = PromisesDebugger.register(result, {
-          topLevel: false,
-          stack: stack,
-          parent: registeredData
-        });
-
-        return result;
-      };
-
-      promise.catch = function(onReject) {
-        var result = originalCatch.value.call(this, function onRejectWrap(val) {
-          chaingRegistered.setValue({
-            type: 'error',
-            value: val
-          });
-
-          if (typeof onReject === 'function') {
-            return onReject.call(this, val);
-          }
-        }),
-        stack;
-
-        try {
-          throw new Error();
-        } catch (e) {
-          stack = e.stack;
-        }
-
-        var chaingRegistered = PromisesDebugger.register(result, {
-          topLevel: false,
-          stack: stack,
-          parent: registeredData
-        });
-
-        return result;
-      };
     },
     dumpTopLevel: function() {
       this.dumpArray(this.topLevel, 'TopLevel Promises');
@@ -311,17 +222,189 @@ console.log('PromisesDebugger inside');
     originalPromiseAll = recurciveGetDesc(originalPromise, 'all'),
     originalPromiseRace = recurciveGetDesc(originalPromise, 'race');
 
-  Object.defineProperty(global, 'Promise', {
-    value: function PromiseConstructor(fn) {
-      if (!(this instanceof global.Promise)) {
-        return originalPromise(fn);
+  var wrapMethods = function(promise, registeredData) {
+    var originalThen = recurciveGetDesc(promise, 'then'),
+      originalCatch = recurciveGetDesc(promise, 'catch')
+
+    registeredData.originalThen = originalThen;
+    registeredData.originalCatch = originalCatch;
+
+    promise.then = function(onResolve, onReject) {
+      // 2 ways to handle 'then'
+      // wrap call to try..catch
+      // or add chaining then()
+
+      var resolve = function(val) {
+        chaingRegistered.setValue({
+          type: 'value',
+          value: val
+        });
+
+        return val;
+      },
+      reject = function(val) {
+        chaingRegistered.setValue({
+          type: 'error',
+          value: val
+        });
+
+        return val;
+      };
+
+      var result = originalThen.value.call(this, function onResolveWrap(val) {
+        // resolve(val); // ?
+
+        if (typeof onResolve === 'function') {
+          return onResolve.call(this, val);
+        }
+      }, function onRejectWrap(val) {
+        // reject(val); // ?
+
+        if (typeof onReject === 'function') {
+          return onReject.call(this, val);
+        }
+      })/*.then(resolve, reject)*/,
+      stack;
+
+      try {
+        throw new Error();
+      } catch (e) {
+        stack = e.stack;
       }
 
-      var stack,
-        registerValue;
+      // recurciveGetDesc(result, 'then').value.call(result, resolve, reject);
+      result.then(resolve, reject);
 
-      var promise = new originalPromise(function(resolve, reject) {
-        return fn.call(this, function resolveWrap(val) {
+      var chaingRegistered = PromisesDebugger.register(result, {
+        topLevel: false,
+        stack: stack,
+        parent: registeredData
+      });
+
+      return result;
+    };
+
+    promise.catch = function(onReject) {
+      var result = originalCatch.value.call(this, function onRejectWrap(val) {
+        chaingRegistered.setValue({
+          type: 'error',
+          value: val
+        });
+
+        if (typeof onReject === 'function') {
+          return onReject.call(this, val);
+        }
+      }),
+      stack;
+
+      try {
+        throw new Error();
+      } catch (e) {
+        stack = e.stack;
+      }
+
+      var chaingRegistered = PromisesDebugger.register(result, {
+        topLevel: false,
+        stack: stack,
+        parent: registeredData
+      });
+
+      return result;
+    };
+  };
+
+  var promiseWrap = function(promise, registeredData) {
+    var thenWrap = function(onResolve, onReject) {
+      var resolve = function(val) {
+        chaingRegistered.setValue({
+          type: 'value',
+          value: val
+        });
+
+        return val;
+      },
+      reject = function(val) {
+        chaingRegistered.setValue({
+          type: 'error',
+          value: val
+        });
+
+        return val;
+      };
+
+      var result = promise.then(function onResolveWrap(val) {
+        if (typeof onResolve === 'function') {
+          return onResolve.call(this, val);
+        }
+      }, function onRejectWrap(val) {
+        if (typeof onReject === 'function') {
+          return onReject.call(this, val);
+        }
+      });
+
+      try {
+        throw new Error();
+      } catch (e) {
+        var stack = e.stack;
+      }
+
+      result.then(resolve, reject);
+
+      var chaingRegistered = PromisesDebugger.register(result, {
+        topLevel: false,
+        stack: stack,
+        parent: registeredData
+      });
+
+      return promiseWrap(result, chaingRegistered);
+    },
+    catchWrap = function(onReject) {
+      var result = promise.catch(function onRejectWrap(val) {
+        chaingRegistered.setValue({
+          type: 'error',
+          value: val
+        });
+
+        if (typeof onReject === 'function') {
+          return onReject.call(this, val);
+        }
+      });
+
+      try {
+        throw new Error();
+      } catch (e) {
+        var stack = e.stack;
+      }
+
+      var chaingRegistered = PromisesDebugger.register(result, {
+        topLevel: false,
+        stack: stack,
+        parent: registeredData
+      });
+
+      return promiseWrap(result, chaingRegistered);
+    };
+
+    var proxy = new Proxy(promise, {
+      get: function(target, name) {
+        if (name === 'then') return thenWrap;
+        if (name === 'catch') return catchWrap;
+
+        return target[name];
+      }
+    });
+
+    PromisesDebugger.promiseByProxy.set(proxy, promise);
+
+    return proxy;
+  };
+
+  global.Promise = new Proxy(originalPromise, {
+    construct: function(Promise, args) {
+      var executor = args[0];
+
+      var promise = new Promise(function(resolve, reject) {
+        return executor.call(this, function resolveWrap(val) {
           var value = {
             type: 'value',
             value: val
@@ -350,6 +433,9 @@ console.log('PromisesDebugger inside');
         })
       });
 
+      var stack,
+        registerValue;
+
       try {
         throw new Error();
       } catch (e) {
@@ -364,72 +450,81 @@ console.log('PromisesDebugger inside');
         registeredData.setValue(registerValue);
       }
 
-      return promise;
+      return promiseWrap(promise, registeredData);
     },
-    enumerable: promiseDesc.enumerable,
-    configurable: promiseDesc.configurable,
-    writable: promiseDesc.writable
+    get: function(target, name) {
+      console.log('get', arguments);
+
+      if (fake.hasOwnProperty(name)) {
+        return fake[name];
+      }
+
+      return target[name];
+    }
   });
 
-  global.Promise.resolve = function(val) {
+  var fake = {};
+
+  fake.resolve = function(val) {
     var result = originalPromiseResolve.value.call(originalPromise, val),
       value = {
         type: 'value',
         value: val
-      },
-      stack;
+      };
 
     try {
       throw new Error();
     } catch (e) {
-      stack = e.stack;
+      var stack = e.stack;
     }
 
-    PromisesDebugger.register(result, {
+    var registeredData = PromisesDebugger.register(result, {
       value: value,
       stack: stack
     });
 
-    return result;
+    return promiseWrap(result, registeredData);
   };
 
-  global.Promise.reject = function(val) {
+  fake.reject = function(val) {
     var result = originalPromiseReject.value.call(originalPromise, val),
       value = {
         type: 'error',
         value: val
-      },
-      stack;
+      };
 
     try {
       throw new Error();
     } catch (e) {
-      stack = e.stack;
+      var stack = e.stack;
     }
 
-    PromisesDebugger.register(result, {
+    var registeredData = PromisesDebugger.register(result, {
       value: value,
       stack: stack
     });
 
-    return result;
+    return promiseWrap(result, registeredData);
   };
 
-  global.Promise.all = function(arr) {
-    var result = originalPromiseAll.value.call(originalPromise, arr),
-      stack;
+  fake.all = function(arr) {
+    arr = arr.map(function(proxy) {
+      return PromisesDebugger.promiseByProxy.get(proxy);
+    });
+
+    var result = originalPromiseAll.value.call(originalPromise, arr);
 
     try {
       throw new Error();
     } catch (e) {
-      stack = e.stack;
+      var stack = e.stack;
     }
 
     var registeredData = PromisesDebugger.register(result, {
       stack: stack
     });
 
-    registeredData.originalThen.value.call(result, function(val) {
+    result.then(function(val) {
       registeredData.setValue({
         type: 'value',
         value: val
@@ -441,24 +536,27 @@ console.log('PromisesDebugger inside');
       });
     });
 
-    return result;
+    return promiseWrap(result, registeredData);
   };
 
-  global.Promise.race = function(arr) {
-    var result = originalPromiseRace.value.call(originalPromise, arr),
-      stack;
+  fake.race = function(arr) {
+    arr = arr.map(function(proxy) {
+      return PromisesDebugger.promiseByProxy.get(proxy);
+    });
+
+    var result = originalPromiseRace.value.call(originalPromise, arr);
 
     try {
       throw new Error();
     } catch (e) {
-      stack = e.stack;
+      var stack = e.stack;
     }
 
     var registeredData = PromisesDebugger.register(result, {
       stack: stack
     });
 
-    registeredData.originalThen.value.call(result, function(val) {
+    result.then(function(val) {
       registeredData.setValue({
         type: 'value',
         value: val
@@ -470,7 +568,7 @@ console.log('PromisesDebugger inside');
       });
     });
 
-    return result;
+    return promiseWrap(result, registeredData);
   };
 
   window.PromisesDebugger = PromisesDebugger;

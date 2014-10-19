@@ -221,6 +221,13 @@
       }
     }
 
+    if (!newLines.length) {
+      /*// fallback to original stack
+      newLines = lines;*/
+
+      return null;
+    }
+
     return {
       lines: newLines,
       message: message
@@ -296,299 +303,330 @@
       content.hidden = false;
     },
     update_data: function(message) {
+      var event = message.event;
+
+      if (dataUpdates.hasOwnProperty(event)) {
+        dataUpdates[event](message);
+      }
+    },
+    reload: function() {
+      doClear(true);
+    }
+  },
+  dataUpdates = {
+    create: function(message) {
       var data = message.data;
 
-      switch (message.event) {
-        case 'create': {
-          // if (!data.topLevel) break;
+      var topLevel = !!data.topLevel;
 
-          var topLevel = !!data.topLevel;
+      var handledStack = data.handledStack = handleStack(data.stack);
 
-          var handledStack = data.handledStack = handleStack(data.stack);
+      if (!handledStack) {
+        // this is due this bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1085124
+        // in short firefox calls Promise.then from native code with native 
+        // functions in the end promises chain (for debug?)
+        return;
+      }
 
-          var row = createPromiseRow(),
-            name = getNameFromStack(data.handledStack, 2),
-            stackCont = document.createElement('div'),
-            chainCont = document.createElement('div');
+      var row = createPromiseRow(),
+        name = getNameFromStack(data.handledStack, 2),
+        stackCont = document.createElement('div'),
+        chainCont = document.createElement('div');
 
-          var promiseRecord = promises[data.id] = {
-            id: data.id,
-            row: row,
-            data: data,
-            topLevel: topLevel,
-            chaining: [],
-            _chaingLength: 0,
-            get chaingLength() {
-              return this._chaingLength;
-            },
-            set chaingLength(val) {
-              var parentRecord = this.parent;
+      var promiseRecord = promises[data.id] = {
+        id: data.id,
+        row: row,
+        data: data,
+        topLevel: topLevel,
+        chaining: [],
+        _chaingLength: 0,
+        get chaingLength() {
+          return this._chaingLength;
+        },
+        set chaingLength(val) {
+          var parentRecord = this.parent;
 
-              this._chaingLength = val;
+          this._chaingLength = val;
 
-              if (parentRecord && parentRecord.chaingLength < val + 1) {
-                parentRecord.chaingLength = val + 1;
-                parentRecord.mostChaing = this;
-              }
-
-              this.row.chain.textContent = val;
-            },
-            _mostChaing: null,
-            set mostChaing(val) {
-              this._mostChaing = val;
-            },
-            get mostChaing() {
-              return this._mostChaing || this.chaining[0] || null;
-            }
-          };
-
-          if (!topLevel) {
-            var parentRecord = promiseRecord.parent = promises[data.parentPromise];
-
-            if (parentRecord) {
-              parentRecord.chaining.push(promiseRecord);
-
-              if (!parentRecord.chaingLength) {
-                parentRecord.chaingLength = 1;
-              }
-            }
+          if (parentRecord && parentRecord.chaingLength < val + 1) {
+            parentRecord.chaingLength = val + 1;
+            parentRecord.mostChaing = this;
           }
 
-          // chainCont.hidden = true;
-          // row.extend.appendChild(chainCont)
+          this.row.chain.textContent = val;
+        },
+        _mostChaing: null,
+        set mostChaing(val) {
+          this._mostChaing = val;
+        },
+        get mostChaing() {
+          return this._mostChaing || this.chaining[0] || null;
+        }
+      };
 
-          row.chain.style.cursor = 'pointer';
-          row.chain.addEventListener('click', function(e) {
-            if (!promiseRecord.chaingLength) return;
+      if (!topLevel) {
+        var parentRecord = promiseRecord.parent = promises[data.parentPromise];
 
+        if (parentRecord) {
+          parentRecord.chaining.push(promiseRecord);
+
+          if (!parentRecord.chaingLength) {
+            parentRecord.chaingLength = 1;
+          }
+        }
+      }
+
+      // chainCont.hidden = true;
+      // row.extend.appendChild(chainCont)
+
+      row.chain.style.cursor = 'pointer';
+      row.chain.addEventListener('click', function(e) {
+        if (!promiseRecord.chaingLength) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var chainRecursion = function(record, index) {
+          var arr = [
+            '<div style="margin-left: ' + index * 10 + 'px;" class="pd-promise-chain">'
+          ];
+
+          record.chaining.forEach(function(promiseRecord) {
+            arr.push('<div>')
+              arr.push('<div class="pd-promise-chain-item">Promise[' + promiseRecord.id + '], Chain[' + promiseRecord.chaingLength + '], ' + (promiseRecord.state ? 'State[' + promiseRecord.state + ']' : '') + '</div>');
+              arr.push(chainRecursion(promiseRecord, index + 1));
+            arr.push('</div>');
+          });
+
+          arr.push('</div>');
+
+          return arr.join('');
+        };
+
+        // var chain = chainRecursion(promiseRecord, 0);
+
+        chainCont.innerHTML = '';
+
+        // if (chainCont.hidden) {
+          // chainCont.innerHTML = '<div class="ui segment">' + chain + '</div>';
+
+          var wrap = document.createElement('div');
+
+          wrap.className = 'ui segment';
+          // wrap.textContent = 'test';
+
+          var useRecord = promiseRecord;
+
+          while (useRecord = useRecord.mostChaing) {
+            wrap.appendChild(useRecord.row.item);
+          }
+
+          chainCont.appendChild(wrap);
+        // }
+
+        // chainCont.hidden = !chainCont.hidden;
+        toggleExtendBlock(row.extend, chainCont);
+      });
+
+      // stackCont.hidden = true;
+      stackCont.innerHTML = '<div class="ui message" style="overflow: auto;"></div>';
+      (function(cont) {
+        // var stack = data.stack.split(/\n/).slice(1),
+        var fragment = document.createDocumentFragment();
+
+        handledStack.lines.forEach(function(line) {
+          var resource = parseAndGerRerouceLink(line),
+            div = document.createElement('div');
+
+          div.appendChild(resource);
+
+          fragment.appendChild(div);
+        });
+
+        cont.appendChild(fragment);
+      }(stackCont.firstChild));
+
+      // row.extend.appendChild(stackCont);
+
+      row.name.style.cursor = 'pointer';
+      row.name.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        toggleExtendBlock(row.extend, stackCont);
+        // stackCont.hidden = !stackCont.hidden;
+      });
+
+      row.id.textContent = data.id;
+      row.name.appendChild(name);
+      row.status.textContent = 'pending';
+      row.value.textContent = 'none'
+      // row.chain.textContent = promiseRecord.chaingLength;
+
+      // if (topLevel) {
+        prepend(tbodyPending, row.item);
+        checkTbody(tbodyPending);
+      // }
+    },
+    value: function(message) {
+      var data = message.data;
+
+      var promise = promises[data.id];
+
+      if (!promise || !promise.row) return;
+
+      if (data.state === 'error') {
+        promise.row.cont.classList.add('negative');
+        promise.row.status.textContent = 'rejected';
+
+        if (promise.topLevel) {
+          prepend(tbodyErrors, promise.row.item);
+          checkTbody(tbodyErrors);
+        } else {
+          var topLevelParent = getTopLevelParent(promise);
+
+          if (topLevelParent.state !== 'error') {
+            topLevelParent.row.cont.classList.remove('positive');
+            topLevelParent.row.cont.classList.add('warning');
+            prepend(tbodyChainErrors, topLevelParent.row.item);
+            checkTbody(tbodyChainErrors);
+          }
+        }
+      } else {
+        promise.row.cont.classList.add('positive');
+        promise.row.status.textContent = 'fullfiled';
+
+        if (promise.topLevel) {
+          prepend(tbodySuccess, promise.row.item);
+          checkTbody(tbodySuccess);
+        }
+      }
+
+      if (!promise.topLevel) {
+        try {
+          tbodyPending.removeChild(promise.row.item);
+          checkTbody(tbodyPending);
+        } catch (e) {}
+      }
+
+      promise.value = data.value;
+      promise.state = data.state;
+
+      var textVal,
+        htmlVal;
+
+      switch (data.value.type) {
+        case 'primitive': {
+          textVal = data.value.primitive + ': ' + data.value.value;
+
+          var div = document.createElement('div');
+
+          div.className = 'primitive-value';
+          div.textContent = textVal;
+
+          promise.row.value.innerHTML = '';
+          promise.row.value.appendChild(div);
+        }; break;
+        case 'json': {
+          var jsonValue = JSON.parse(data.value.json);
+
+          data.value.parsed = jsonValue;
+
+          textVal = 'JSON: { ' + Object.keys(jsonValue).join(' , ') + ' }';
+
+          var div = document.createElement('div');
+
+          div.className = 'json-value';
+          div.textContent = textVal;
+
+          promise.row.value.innerHTML = '';
+          promise.row.value.appendChild(div);
+        }; break;
+        case 'object': {
+          textVal = data.value.object;
+          promise.row.value.textContent = textVal;
+        }; break;
+        case 'error': (function() {
+          var handledStack = handleStack(data.value.error.stack);
+
+          var val = '<i class="attention icon"></i> ' +
+              (data.value.error.message || handledStack.message || 'Error '),
+            wrap = document.createElement('div'),
+            errorCont = document.createElement('div');
+
+          wrap.role = 'button';
+          wrap.className = 'pd-show-error';
+          wrap.innerHTML = val;
+
+          wrap.appendChild(getNameFromStack(handledStack, 1));
+
+          wrap.style.cursor = 'pointer';
+          wrap.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
 
-            var chainRecursion = function(record, index) {
-              var arr = [
-                '<div style="margin-left: ' + index * 10 + 'px;" class="pd-promise-chain">'
-              ];
-
-              record.chaining.forEach(function(promiseRecord) {
-                arr.push('<div>')
-                  arr.push('<div class="pd-promise-chain-item">Promise[' + promiseRecord.id + '], Chain[' + promiseRecord.chaingLength + '], ' + (promiseRecord.state ? 'State[' + promiseRecord.state + ']' : '') + '</div>');
-                  arr.push(chainRecursion(promiseRecord, index + 1));
-                arr.push('</div>');
-              });
-
-              arr.push('</div>');
-
-              return arr.join('');
-            };
-
-            // var chain = chainRecursion(promiseRecord, 0);
-
-            chainCont.innerHTML = '';
-
-            // if (chainCont.hidden) {
-              // chainCont.innerHTML = '<div class="ui segment">' + chain + '</div>';
-
-              var wrap = document.createElement('div');
-
-              wrap.className = 'ui segment';
-              // wrap.textContent = 'test';
-
-              var useRecord = promiseRecord;
-
-              while (useRecord = useRecord.mostChaing) {
-                wrap.appendChild(useRecord.row.item);
-              }
-
-              chainCont.appendChild(wrap);
-            // }
-
-            // chainCont.hidden = !chainCont.hidden;
-            toggleExtendBlock(row.extend, chainCont);
+            // errorCont.hidden = !errorCont.hidden;
+            toggleExtendBlock(promise.row.extend, errorCont);
           });
 
-          // stackCont.hidden = true;
-          stackCont.innerHTML = '<div class="ui message" style="overflow: auto;"></div>';
+          // errorCont.hidden = true;
+          errorCont.innerHTML = '<div class="ui error message" style="overflow: auto;"></div>';
+
           (function(cont) {
-            // var stack = data.stack.split(/\n/).slice(1),
             var fragment = document.createDocumentFragment();
+
+            var firstDiv = document.createElement('div');
+
+            firstDiv.textContent = data.value.error.message;
+            fragment.appendChild(firstDiv);
 
             handledStack.lines.forEach(function(line) {
               var resource = parseAndGerRerouceLink(line),
                 div = document.createElement('div');
 
+              div.style.marginLeft = '20px';
               div.appendChild(resource);
 
               fragment.appendChild(div);
             });
 
             cont.appendChild(fragment);
-          }(stackCont.firstChild));
+          }(errorCont.firstChild));
 
-          // row.extend.appendChild(stackCont);
+          // promise.row.extend.appendChild(errorCont);
 
-          row.name.style.cursor = 'pointer';
-          row.name.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+          promise.row.value.innerHTML = '';
+          promise.row.value.appendChild(wrap);
 
-            toggleExtendBlock(row.extend, stackCont);
-            // stackCont.hidden = !stackCont.hidden;
-          });
-
-          row.id.textContent = data.id;
-          row.name.appendChild(name);
-          row.status.textContent = 'pending';
-          row.value.textContent = 'none'
-          // row.chain.textContent = promiseRecord.chaingLength;
-
-          // if (topLevel) {
-            prepend(tbodyPending, row.item);
-            checkTbody(tbodyPending);
-          // }
+          promise.row.value.classList.add('error');
+        }()); break;
+        case 'function': {
+          textVal = data.value.function;
+          promise.row.value.textContent = textVal;
         }; break;
-        case 'value': {
-          var promise = promises[data.id];
-
-          if (!promise || !promise.row) break;
-
-          if (data.state === 'error') {
-            promise.row.cont.classList.add('negative');
-            promise.row.status.textContent = 'rejected';
-
-            if (promise.topLevel) {
-              prepend(tbodyErrors, promise.row.item);
-              checkTbody(tbodyErrors);
-            } else {
-              var topLevelParent = getTopLevelParent(promise);
-
-              if (topLevelParent.state !== 'error') {
-                topLevelParent.row.cont.classList.remove('positive');
-                topLevelParent.row.cont.classList.add('warning');
-                prepend(tbodyChainErrors, topLevelParent.row.item);
-                checkTbody(tbodyChainErrors);
-              }
-            }
-          } else {
-            promise.row.cont.classList.add('positive');
-            promise.row.status.textContent = 'fullfiled';
-
-            if (promise.topLevel) {
-              prepend(tbodySuccess, promise.row.item);
-              checkTbody(tbodySuccess);
-            }
-          }
-
-          if (!promise.topLevel) {
-            try {
-              tbodyPending.removeChild(promise.row.item);
-              checkTbody(tbodyPending);
-            } catch (e) {}
-          }
-
-          promise.value = data.value;
-          promise.state = data.state;
-
-          var textVal,
-            htmlVal;
-
-          switch (data.value.type) {
-            case 'primitive': {
-              textVal = data.value.primitive + ': ' + data.value.value;
-
-              var div = document.createElement('div');
-
-              div.className = 'primitive-value';
-              div.textContent = textVal;
-
-              promise.row.value.innerHTML = '';
-              promise.row.value.appendChild(div);
-            }; break;
-            case 'json': {
-              var jsonValue = JSON.parse(data.value.json);
-
-              data.value.parsed = jsonValue;
-
-              textVal = 'JSON: { ' + Object.keys(jsonValue).join(' , ') + ' }';
-
-              var div = document.createElement('div');
-
-              div.className = 'json-value';
-              div.textContent = textVal;
-
-              promise.row.value.innerHTML = '';
-              promise.row.value.appendChild(div);
-            }; break;
-            case 'object': {
-              textVal = data.value.object;
-              promise.row.value.textContent = textVal;
-            }; break;
-            case 'error': (function() {
-              var handledStack = handleStack(data.value.error.stack);
-
-              var val = '<i class="attention icon"></i> ' +
-                  (data.value.error.message || handledStack.message || 'Error '),
-                wrap = document.createElement('div'),
-                errorCont = document.createElement('div');
-
-              wrap.role = 'button';
-              wrap.className = 'pd-show-error';
-              wrap.innerHTML = val;
-
-              wrap.appendChild(getNameFromStack(handledStack, 1));
-
-              wrap.style.cursor = 'pointer';
-              wrap.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // errorCont.hidden = !errorCont.hidden;
-                toggleExtendBlock(promise.row.extend, errorCont);
-              });
-
-              // errorCont.hidden = true;
-              errorCont.innerHTML = '<div class="ui error message" style="overflow: auto;"></div>';
-
-              (function(cont) {
-                var fragment = document.createDocumentFragment();
-
-                var firstDiv = document.createElement('div');
-
-                firstDiv.textContent = data.value.error.message;
-                fragment.appendChild(firstDiv);
-
-                handledStack.lines.forEach(function(line) {
-                  var resource = parseAndGerRerouceLink(line),
-                    div = document.createElement('div');
-
-                  div.style.marginLeft = '20px';
-                  div.appendChild(resource);
-
-                  fragment.appendChild(div);
-                });
-
-                cont.appendChild(fragment);
-              }(errorCont.firstChild));
-
-              // promise.row.extend.appendChild(errorCont);
-
-              promise.row.value.innerHTML = '';
-              promise.row.value.appendChild(wrap);
-
-              promise.row.value.classList.add('error');
-            }()); break;
-            default: {
-              // textVal = JSON.stringify(data.value);
-              textVal = data.value.type;
-              promise.row.value.textContent = textVal;
-            }
-          }
-
-          
-        }; break;
+        default: {
+          // textVal = JSON.stringify(data.value);
+          textVal = data.value.type;
+          promise.row.value.textContent = textVal;
+        }
       }
     },
-    reload: function() {
-      doClear(true);
+    shoot_toplevel: function(message) {
+      var data = message.data;
+      var promise = promises[data.id];
+
+      console.log('shoot_toplevel', promise.topLevel);
+
+      if (!promise || !promise.topLevel) return;
+
+      promise.topLevel = false;
+
+      var parentElement = promise.row.item.parentElement;
+
+      if (parentElement) {
+        parentElement.removeChild(promise.row.item);
+        checkTbody(parentElement);
+      }
     }
   };
 
