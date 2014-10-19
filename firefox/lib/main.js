@@ -203,7 +203,8 @@ PromisesPanel.prototype = {
 
             if (DebuggerView.Sources.containsValue(message.file)) {
               DebuggerView.setEditorLocation(message.file, +message.line, {
-                align: 'center'
+                align: 'center',
+                charOffset: +message.col
               });
             } else if (waiting < WAIT_LIMIT) {
               waiting += 70;
