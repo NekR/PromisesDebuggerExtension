@@ -260,10 +260,10 @@
 
   var table = document.getElementById('promises-table'),
     tBodies = table.querySelectorAll('.pd-table-body'),
-    tbodyErrors = tBodies[0],
-    tbodyChaingErrors = tBodies[1],
-    tbodyPending = tBodies[2],
-    tbodySuccess = tBodies[3];
+    tbodyErrors = table.querySelector('.tbody-erros'),
+    tbodyChainErrors = table.querySelector('.tbody-chain-errors'),
+    tbodyPending = table.querySelector('.tbody-pending'),
+    tbodySuccess = table.querySelector('.tbody-success');
 
   var promises = {},
     promisesStash = {};
@@ -434,9 +434,9 @@
           row.value.textContent = 'none'
           // row.chain.textContent = promiseRecord.chaingLength;
 
-          if (topLevel) {
+          // if (topLevel) {
             prepend(tbodyPending, row.item);
-          }
+          // }
         }; break;
         case 'value': {
           var promise = promises[data.id];
@@ -455,13 +455,19 @@
               if (topLevelParent.state !== 'error') {
                 topLevelParent.row.cont.classList.remove('positive');
                 topLevelParent.row.cont.classList.add('warning');
-                prepend(tbodyChaingErrors, topLevelParent.row.item);
+                prepend(tbodyChainErrors, topLevelParent.row.item);
               }
             }
           } else {
             promise.row.cont.classList.add('positive');
             promise.row.status.textContent = 'fullfiled';
             promise.topLevel && prepend(tbodySuccess, promise.row.item);
+          }
+
+          if (!promise.topLevel) {
+            try {
+              tbodyPending.removeChild(promise.row.item);
+            } catch (e) {}
           }
 
           promise.value = data.value;
