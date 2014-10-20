@@ -341,7 +341,7 @@ console.log('PromisesDebugger inside');
         return val;
       };
 
-      var result = promise.then(function onResolveWrap(val) {
+      var result = promise.then(onResolve ? function onResolveWrap(val) {
         if (typeof onResolve !== 'function') return;
 
         if (isChrome) {
@@ -367,20 +367,25 @@ console.log('PromisesDebugger inside');
 
         // resolve(retVal);
         return retVal;
-      }, function onRejectWrap(val) {
+      } : null, onReject ? function onRejectWrap(val) {
         if (typeof onReject !== 'function') return;
 
         if (isChrome) {
           var ret = new originalPromise(function(DONT_USE, retReject) {
             setTimeout(function() {
-              ret.then(null, function(b) {
+              ret.catch(function(b) {
                 reject(b);
               });
             }, 0);
 
-            var retVal = onResolve.call(promise, val);
+            var retVal = onReject.call(promise, val);
 
-            retReject(retVal);
+            // suppress native rethrow
+            // setTimeout(function() {
+              // try {
+                retReject(retVal);
+              // } catch (e) {};
+            // }, 0);
           });
 
           return ret;
@@ -389,7 +394,7 @@ console.log('PromisesDebugger inside');
         var val = onReject.call(promise, val);
         // reject(val);
         return val;
-      });
+      } : null);
 
       try {
         throw new Error();
@@ -410,23 +415,50 @@ console.log('PromisesDebugger inside');
       return promiseWrap(result, chaingRegistered);
     },
     catchWrap = function(onReject) {
-      var result = promise.catch(function onRejectWrap(val) {
+      var reject = function(val) {
         chaingRegistered.setValue({
           type: 'error',
           value: val
         });
+      };
 
-        if (typeof onReject === 'function') {
-          var val = onReject.call(this, val);
+      var result = promise.catch(function onRejectWrap(val) {
+        if (typeof onReject !== 'function') return;
 
-          return val;
+        if (isChrome) {
+          var ret = new originalPromise(function(DONT_USE, retReject) {
+            setTimeout(function() {
+              ret.then(null, function(b) {
+                reject(b);
+              });
+            }, 0);
+
+            var retVal = onReject.call(promise, val);
+
+            // suppress native rethrow
+            // setTimeout(function() {
+              // try {
+                retReject(retVal);
+              // } catch (e) {};
+            // }, 0);
+          });
+
+          return ret;
         }
+
+        var val = onReject.call(promise, val);
+        // reject(val);
+        return val;
       });
 
       try {
         throw new Error();
       } catch (e) {
         var stack = e.stack;
+      }
+
+      if (!isChrome) {
+        result.catch(reject);
       }
 
       var chaingRegistered = PromisesDebugger.register(result, {
@@ -441,7 +473,10 @@ console.log('PromisesDebugger inside');
     var proxy = makeProxy(promise, {
       get: function(target, name) {
         if (name === 'then') return thenWrap;
-        if (name === 'catch') return catchWrap;
+        // if (name === 'catch') return catchWrap;
+        if (name === 'catch') return function(onReject) {
+          return thenWrap.call(this, null, onReject);
+        };
 
         return target[name];
       }
