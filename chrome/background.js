@@ -61,7 +61,7 @@
   var getDebugBackendCode = function() {
     var xhr = new XMLHttpRequest();
 
-    xhr.open('GET', 'shared/promises-backend.js', false);
+    xhr.open('GET', 'shared/promises-backend2.js', false);
     xhr.send();
 
     return xhr.response;

@@ -154,7 +154,6 @@ console.log('PromisesDebugger inside');
         registeredData.setValue(params.value);
       }
 
-      // wrapMethods(promise, registeredData);
       this.promiseToRecord.set(promise, registeredData);
 
       promise.__recordData__ = registeredData;
@@ -222,95 +221,99 @@ console.log('PromisesDebugger inside');
     originalPromiseAll = recurciveGetDesc(originalPromise, 'all'),
     originalPromiseRace = recurciveGetDesc(originalPromise, 'race');
 
-  var wrapMethods = function(promise, registeredData) {
-    var originalThen = recurciveGetDesc(promise, 'then'),
-      originalCatch = recurciveGetDesc(promise, 'catch')
-
-    registeredData.originalThen = originalThen;
-    registeredData.originalCatch = originalCatch;
-
-    promise.then = function(onResolve, onReject) {
-      // 2 ways to handle 'then'
-      // wrap call to try..catch
-      // or add chaining then()
-
-      var resolve = function(val) {
-        chaingRegistered.setValue({
-          type: 'value',
-          value: val
-        });
-
-        return val;
-      },
-      reject = function(val) {
-        chaingRegistered.setValue({
-          type: 'error',
-          value: val
-        });
-
-        return val;
+  if (!global.Proxy) {
+    var PromiseProxy = (function() {
+      var PromiseConstructor;
+      var PromiseProxy = function(target, params) {
+        if (typeof target === 'function') {
+          return (PromiseConstructor = ProxyPromiseConstructor(target, params));
+        } else if (target instanceof originalPromise) {
+          return ProxyPromiseInstance(target, params);
+        }
       };
 
-      var result = originalThen.value.call(this, function onResolveWrap(val) {
-        // resolve(val); // ?
+      var ProxyPromiseInstance = function(target, params) {
+        // target is instance of Promise
 
-        if (typeof onResolve === 'function') {
-          return onResolve.call(this, val);
+        var proxy = Object.create(PromiseConstructor.prototype);
+        target.proxyInstance = proxy;
+        proxy.promise = target;
+
+        if (params.get) {
+          var thenDesc = recurciveGetDesc(target, 'then'),
+            catchDesc = recurciveGetDesc(target, 'catch');
+
+          Object.defineProperties(proxy, {
+            then: {
+              enumerable: thenDesc.enumerable,
+              configurable: thenDesc.configurable,
+              get: function() {
+                return params.get(target, 'then')
+              }
+            },
+            catch: {
+              enumerable: catchDesc.enumerable,
+              configurable: catchDesc.configurable,
+              get: function() {
+                return params.get(target, 'catch')
+              }
+            }
+          });
         }
-      }, function onRejectWrap(val) {
-        // reject(val); // ?
 
-        if (typeof onReject === 'function') {
-          return onReject.call(this, val);
+        return proxy;
+      };
+
+      var ProxyPromiseConstructor = function(target, params) {
+        if (params.construct) {
+          // This is proxy constructor
+          var proxy = function PromiseProxy(executor) {
+            var proxyInstance = params.construct(target, arguments);
+
+            if (proxyInstance.promise) {
+              this.promise = proxyInstance.promise;
+            }
+            
+            return proxyInstance;
+          };
+        } else {
+          var proxy = function() {};
         }
-      })/*.then(resolve, reject)*/,
-      stack;
 
-      try {
-        throw new Error();
-      } catch (e) {
-        stack = e.stack;
-      }
+        if (params.get) {
+          var PromiseConstructorPropGetter = function(prop) {
+            var desc = recurciveGetDesc(target, prop);
 
-      // recurciveGetDesc(result, 'then').value.call(result, resolve, reject);
-      result.then(resolve, reject);
+            return {
+              get: function() {
+                return params.get(target, prop, target);
+              },
+              configurable: desc.configurable,
+              enumerable: desc.enumerable
+            };
+          };
 
-      var chaingRegistered = PromisesDebugger.register(result, {
-        topLevel: false,
-        stack: stack,
-        parent: registeredData
-      });
-
-      return result;
-    };
-
-    promise.catch = function(onReject) {
-      var result = originalCatch.value.call(this, function onRejectWrap(val) {
-        chaingRegistered.setValue({
-          type: 'error',
-          value: val
-        });
-
-        if (typeof onReject === 'function') {
-          return onReject.call(this, val);
+          Object.defineProperties(proxy, {
+            resolve: PromiseConstructorPropGetter('resolve'),
+            reject: PromiseConstructorPropGetter('reject'),
+            all: PromiseConstructorPropGetter('all'),
+            race: PromiseConstructorPropGetter('race')
+          });
         }
-      }),
-      stack;
 
-      try {
-        throw new Error();
-      } catch (e) {
-        stack = e.stack;
-      }
+        return proxy;
+      };
 
-      var chaingRegistered = PromisesDebugger.register(result, {
-        topLevel: false,
-        stack: stack,
-        parent: registeredData
-      });
+      return PromiseProxy;
+    }());
+  }
 
-      return result;
-    };
+  var makeProxy = function(target, params) {
+    if (global.Proxy) {
+      return new Proxy(target, params);
+    } else {
+      return PromiseProxy(target, params);
+    }
   };
 
   var promiseWrap = function(promise, registeredData) {
@@ -385,7 +388,7 @@ console.log('PromisesDebugger inside');
       return promiseWrap(result, chaingRegistered);
     };
 
-    var proxy = new Proxy(promise, {
+    var proxy = makeProxy(promise, {
       get: function(target, name) {
         if (name === 'then') return thenWrap;
         if (name === 'catch') return catchWrap;
@@ -399,68 +402,73 @@ console.log('PromisesDebugger inside');
     return proxy;
   };
 
-  global.Promise = new Proxy(originalPromise, {
-    construct: function(Promise, args) {
-      var executor = args[0];
+  Object.defineProperty(global, 'Promise', {
+    value: makeProxy(originalPromise, {
+      construct: function(Promise, args) {
+        var executor = args[0];
 
-      var promise = new Promise(function(resolve, reject) {
-        return executor.call(this, function resolveWrap(val) {
-          var value = {
-            type: 'value',
-            value: val
-          };
+        var promise = new Promise(function(resolve, reject) {
+          return executor.call(this, function resolveWrap(val) {
+            var value = {
+              type: 'value',
+              value: val
+            };
 
-          if (registeredData) {
-            registeredData.setValue(value);
-          } else {
-            registerValue = value;
-          }
+            if (registeredData) {
+              registeredData.setValue(value);
+            } else {
+              registerValue = value;
+            }
 
-          return resolve.call(this, val);
-        }, function rejectWrap(val) {
-          var value = {
-            type: 'error',
-            value: val
-          };
+            return resolve.call(this, val);
+          }, function rejectWrap(val) {
+            var value = {
+              type: 'error',
+              value: val
+            };
 
-          if (registeredData) {
-            registeredData.setValue(value);
-          } else {
-            registerValue = value;
-          }
+            if (registeredData) {
+              registeredData.setValue(value);
+            } else {
+              registerValue = value;
+            }
 
-          return reject.call(this, val);
-        })
-      });
+            return reject.call(this, val);
+          })
+        });
 
-      var stack,
-        registerValue;
+        var stack,
+          registerValue;
 
-      try {
-        throw new Error();
-      } catch (e) {
-        stack = e.stack;
+        try {
+          throw new Error();
+        } catch (e) {
+          stack = e.stack;
+        }
+
+        var registeredData = PromisesDebugger.register(promise, {
+          stack: stack
+        });
+
+        if (registerValue) {
+          registeredData.setValue(registerValue);
+        }
+
+        return promiseWrap(promise, registeredData);
+      },
+      get: function(target, name) {
+        console.log('get', arguments);
+
+        if (fake.hasOwnProperty(name)) {
+          return fake[name];
+        }
+
+        return target[name];
       }
-
-      var registeredData = PromisesDebugger.register(promise, {
-        stack: stack
-      });
-
-      if (registerValue) {
-        registeredData.setValue(registerValue);
-      }
-
-      return promiseWrap(promise, registeredData);
-    },
-    get: function(target, name) {
-      console.log('get', arguments);
-
-      if (fake.hasOwnProperty(name)) {
-        return fake[name];
-      }
-
-      return target[name];
-    }
+    }),
+    enumerable: promiseDesc.enumerable,
+    configurable: promiseDesc.configurable,
+    writable: promiseDesc.writable
   });
 
   var fake = {};

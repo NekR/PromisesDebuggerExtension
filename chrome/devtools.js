@@ -82,11 +82,11 @@ registerWatchListeners = function() {
   }
 
   watchListenersRegistered = true;
-},
+},/*
 evalDebugBackend = function(callback) {
   var xhr = new XMLHttpRequest();
 
-  xhr.open('GET', 'shared/promises-backend.js', false);
+  xhr.open('GET', 'shared/promises-backend2.js', false);
   xhr.send();
 
   chrome.devtools.inspectedWindow.eval(xhr.response, function(result, exception) {
@@ -98,7 +98,7 @@ evalDebugBackend = function(callback) {
       callback();
     }
   });
-},
+},*/
 startWaitReloads = function() {
   // request wait reloads
   port.onMessage.addListener(onReload);
