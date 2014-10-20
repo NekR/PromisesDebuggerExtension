@@ -109,9 +109,13 @@ console.log('PromisesDebugger inside');
               };
             }
           } else if (typeof value === 'function') {
+            var strVal = value + '',
+              nameEnd = strVal.indexOf(')'),
+              isNative = strVal.indexOf('[native code]') !== -1;
+
             sendData.value = {
               type: 'function',
-              function: value + ''
+              function: isNative ? strVal : strVal.slice(0, nameEnd + 1)
             };
           } else {
             // console.log('value unknown:', value);
@@ -342,8 +346,6 @@ console.log('PromisesDebugger inside');
       };
 
       var result = promise.then(onResolve ? function onResolveWrap(val) {
-        if (typeof onResolve !== 'function') return;
-
         if (isChrome) {
           var useVal = val;
           var ret = new originalPromise(function(retResolve, DONT_USE) {
@@ -368,24 +370,19 @@ console.log('PromisesDebugger inside');
         // resolve(retVal);
         return retVal;
       } : null, onReject ? function onRejectWrap(val) {
-        if (typeof onReject !== 'function') return;
-
         if (isChrome) {
-          var ret = new originalPromise(function(DONT_USE, retReject) {
+          var ret = new originalPromise(function(retResolve, DONT_USE) {
             setTimeout(function() {
-              ret.catch(function(b) {
+              ret.then(function(a) {
+                resolve(a);
+              }, function(b) {
                 reject(b);
               });
             }, 0);
 
             var retVal = onReject.call(promise, val);
 
-            // suppress native rethrow
-            // setTimeout(function() {
-              // try {
-                retReject(retVal);
-              // } catch (e) {};
-            // }, 0);
+            retResolve(retVal);
           });
 
           return ret;
@@ -576,6 +573,10 @@ console.log('PromisesDebugger inside');
       stack: stack
     });
 
+    false && setTimeout(function() {
+      registeredData.setValue(value);
+    }, 0);
+
     return promiseWrap(result, registeredData);
   };
 
@@ -596,6 +597,10 @@ console.log('PromisesDebugger inside');
       value: value,
       stack: stack
     });
+
+    false && setTimeout(function() {
+      registeredData.setValue(value);
+    }, 0);
 
     return promiseWrap(result, registeredData);
   };

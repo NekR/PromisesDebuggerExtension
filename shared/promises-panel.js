@@ -550,7 +550,7 @@
           var handledStack = handleStack(data.value.error.stack);
 
           var val = '<i class="attention icon"></i> ' +
-              (data.value.error.message || handledStack.message || 'Error '),
+              (data.value.error.message || handledStack.message || 'Error') + ' ',
             wrap = document.createElement('div'),
             errorCont = document.createElement('div');
 
