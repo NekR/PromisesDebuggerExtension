@@ -502,11 +502,12 @@ console.log('PromisesDebugger inside');
   Object.defineProperty(global, 'Promise', {
     value: makeProxy(originalPromise, {
       construct: function(Promise, args) {
-        var executor = args[0];
+        var executor = args[0],
+          registerValue;
 
         var promise = new Promise(function(resolve, reject) {
-          return executor.call(this, function resolveWrap(val) {
-            var value = {
+          var result = executor.call(this, function resolveWrap(val) {
+            /*var value = {
               type: 'value',
               value: val
             };
@@ -515,11 +516,13 @@ console.log('PromisesDebugger inside');
               registeredData.setValue(value);
             } else {
               registerValue = value;
-            }
+            }*/
+
+            if (registerValue) return;
 
             return resolve.call(this, val);
           }, function rejectWrap(val) {
-            var value = {
+            /*var value = {
               type: 'error',
               value: val
             };
@@ -528,28 +531,49 @@ console.log('PromisesDebugger inside');
               registeredData.setValue(value);
             } else {
               registerValue = value;
-            }
+            }*/
+
+            if (registerValue) return;
 
             return reject.call(this, val);
-          })
-        });
+          });
 
-        var stack,
-          registerValue;
+          return result;
+        });
 
         try {
           throw new Error();
         } catch (e) {
-          stack = e.stack;
+          var stack = e.stack;
         }
 
         var registeredData = PromisesDebugger.register(promise, {
           stack: stack
         });
 
-        if (registerValue) {
+        promise.then(function(val) {
+          var value = {
+            type: 'value',
+            value: val
+          };
+
+          registerValue = value;
+
+          registeredData.setValue(value);
+        }, function(val) {
+          var value = {
+            type: 'error',
+            value: val
+          };
+
+          registerValue = value;
+
+          registeredData.setValue(value);
+        });
+
+        /*if (registerValue) {
           registeredData.setValue(registerValue);
-        }
+        }*/
 
         return promiseWrap(promise, registeredData);
       },
