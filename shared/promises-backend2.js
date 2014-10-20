@@ -20,6 +20,10 @@ console.log('PromisesDebugger inside');
       return proto === Object.prototype || proto == null;
     };
 
+  var isChrome = typeof chrome !== 'undefined';
+
+  console.log('IS CHROME', isChrome);
+
   var PromisesDebugger = {
     debugging: [],
     topLevel: [],
@@ -42,6 +46,8 @@ console.log('PromisesDebugger inside');
             };
 
           if (value instanceof originalPromise) {
+            value = PromisesDebugger.promiseByProxy.get(value) || value;
+
             var record = PromisesDebugger.promiseToRecord.get(value);
 
             sendData.value = {
@@ -236,7 +242,7 @@ console.log('PromisesDebugger inside');
         // target is instance of Promise
 
         var proxy = Object.create(PromiseConstructor.prototype);
-        target.proxyInstance = proxy;
+        // target.proxyInstance = proxy;
         proxy.promise = target;
 
         if (params.get) {
@@ -336,13 +342,53 @@ console.log('PromisesDebugger inside');
       };
 
       var result = promise.then(function onResolveWrap(val) {
-        if (typeof onResolve === 'function') {
-          return onResolve.call(this, val);
+        if (typeof onResolve !== 'function') return;
+
+        if (isChrome) {
+          var useVal = val;
+          var ret = new originalPromise(function(retResolve, DONT_USE) {
+            setTimeout(function() {
+              ret.then(function(a) {
+                resolve(a);
+              }, function(b) {
+                reject(b);
+              });
+            }, 0);
+
+            var retVal = onResolve.call(promise, val);
+
+            retResolve(retVal);
+          });
+
+          return ret;
         }
+
+        var retVal = onResolve.call(promise, val);
+
+        // resolve(retVal);
+        return retVal;
       }, function onRejectWrap(val) {
-        if (typeof onReject === 'function') {
-          return onReject.call(this, val);
+        if (typeof onReject !== 'function') return;
+
+        if (isChrome) {
+          var ret = new originalPromise(function(DONT_USE, retReject) {
+            setTimeout(function() {
+              ret.then(null, function(b) {
+                reject(b);
+              });
+            }, 0);
+
+            var retVal = onResolve.call(promise, val);
+
+            retReject(retVal);
+          });
+
+          return ret;
         }
+
+        var val = onReject.call(promise, val);
+        // reject(val);
+        return val;
       });
 
       try {
@@ -351,7 +397,9 @@ console.log('PromisesDebugger inside');
         var stack = e.stack;
       }
 
-      result.then(resolve, reject);
+      if (!isChrome) {
+        result.then(resolve, reject);
+      }
 
       var chaingRegistered = PromisesDebugger.register(result, {
         topLevel: false,
@@ -369,7 +417,9 @@ console.log('PromisesDebugger inside');
         });
 
         if (typeof onReject === 'function') {
-          return onReject.call(this, val);
+          var val = onReject.call(this, val);
+
+          return val;
         }
       });
 
@@ -457,7 +507,7 @@ console.log('PromisesDebugger inside');
         return promiseWrap(promise, registeredData);
       },
       get: function(target, name) {
-        console.log('get', arguments);
+        // console.log('get', arguments);
 
         if (fake.hasOwnProperty(name)) {
           return fake[name];
