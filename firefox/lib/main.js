@@ -80,7 +80,7 @@ var buildProgressListener = function(obj, methods) {
 
 let promisesBackendCode;
 
-readURI(self.data.url('shared/promises-backend2.js'))
+readURI(self.data.url('shared/promises-backend.js'))
   .then(function(code) {
     promisesBackendCode = code;
   });

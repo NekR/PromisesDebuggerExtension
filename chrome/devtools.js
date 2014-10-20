@@ -86,7 +86,7 @@ registerWatchListeners = function() {
 evalDebugBackend = function(callback) {
   var xhr = new XMLHttpRequest();
 
-  xhr.open('GET', 'shared/promises-backend2.js', false);
+  xhr.open('GET', 'shared/promises-backend.js', false);
   xhr.send();
 
   chrome.devtools.inspectedWindow.eval(xhr.response, function(result, exception) {
