@@ -569,11 +569,10 @@ console.log('PromisesDebugger inside');
     }
 
     var registeredData = PromisesDebugger.register(result, {
-      value: value,
       stack: stack
     });
 
-    false && setTimeout(function() {
+    setTimeout(function() {
       registeredData.setValue(value);
     }, 0);
 
@@ -594,11 +593,10 @@ console.log('PromisesDebugger inside');
     }
 
     var registeredData = PromisesDebugger.register(result, {
-      value: value,
       stack: stack
     });
 
-    false && setTimeout(function() {
+    setTimeout(function() {
       registeredData.setValue(value);
     }, 0);
 
