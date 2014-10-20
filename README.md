@@ -1,15 +1,15 @@
 # Promises Debugger Extension
 
-## About
+## Hello
 
-Very first version.
+Promises Debugger Extension allow you debug native Promises (ES6) right now in current and higher versions of Chrome and Firefox.
 
-Currently extensions realizes panels for Chrome and Firefox browsers
+Please see video for details. Extension is in really early version, but soon it will have more features.
 
-### Video
+## Video
 
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=Fl54hVPiCWg
-" target="_blank"><img src="http://img.youtube.com/vi/Fl54hVPiCWg/0.jpg" 
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=60K9y7_tYfQ
+" target="_blank"><img src="http://img.youtube.com/vi/60K9y7_tYfQ/0.jpg" 
 alt="IMAGE ALT TEXT HERE" width="320" height="220" border="10" /></a>
 
 ## How to run
