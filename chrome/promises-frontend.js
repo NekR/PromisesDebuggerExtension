@@ -91,17 +91,20 @@
   };
 
   global.attachToBackend();
+  global.evalBackend = function(code) {
+    var script = document.createElement('script');
+
+    script.textContent = code;
+    document.documentElement.appendChild(script);
+    document.documentElement.removeChild(script);
+  };
 
   (function() {
-    console.log("hello from injected code", window.PromisesDebugger);
+    console.log("hello from injected code");
 
 
-    if (backendCode) {
-      var script = document.createElement('script');
-
-      script.textContent = backendCode;
-      document.documentElement.appendChild(script);
-      document.documentElement.removeChild(script);
+    if (typeof backendCode !== 'undefined') {
+      global.evalBackend(backendCode);
     }
   }());
 }(this));

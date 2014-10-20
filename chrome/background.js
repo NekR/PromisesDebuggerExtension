@@ -42,7 +42,8 @@
   },
   attachToTarget = function(inspectData, callback) {
     chrome.tabs.executeScript(inspectData.tabId, {
-      code: 'var backendCode = ' + JSON.stringify(debugBackendCode) + ';',
+      code: 'var backendCode = ' + JSON.stringify(debugBackendCode) + ';' +
+        'this.evalBackend && this.evalBackend(backendCode);',
       runAt: 'document_start'
     }, function() {
       
