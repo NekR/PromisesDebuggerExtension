@@ -345,9 +345,20 @@ console.log('PromisesDebugger inside');
         return val;
       };
 
-      var result = promise.then(onResolve ? function onResolveWrap(val) {
+      if (onResolve == null) {
+        onResolve = function() {};
+      } else if (typeof onResolve !== 'function' && false) {
+        throw new TypeError('...');
+      }
+
+      if (onReject == null) {
+        onReject = function() {};
+      } else if (typeof onReject !== 'function' && false) {
+        throw new TypeError('...');
+      }
+
+      function onResolveWrap(val) {
         if (isChrome) {
-          var useVal = val;
           var ret = new originalPromise(function(retResolve, DONT_USE) {
             setTimeout(function() {
               ret.then(function(a) {
@@ -369,7 +380,9 @@ console.log('PromisesDebugger inside');
 
         // resolve(retVal);
         return retVal;
-      } : null, onReject ? function onRejectWrap(val) {
+      }
+
+      function onRejectWrap(val) {
         if (isChrome) {
           var ret = new originalPromise(function(retResolve, DONT_USE) {
             setTimeout(function() {
@@ -391,7 +404,9 @@ console.log('PromisesDebugger inside');
         var val = onReject.call(promise, val);
         // reject(val);
         return val;
-      } : null);
+      }
+
+      var result = promise.then(onResolveWrap, onRejectWrap);
 
       try {
         throw new Error();
