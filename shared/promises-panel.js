@@ -188,20 +188,16 @@
 
     return resourceLink;
   },
-  getNameFromStack = function(handledStack, i, preferedName) {
+  getNameFromStack = function(handledStack, i, name) {
     var stackName = handledStack.lines[0],
       url = extractUrl(stackName),
       urlMatch = url && url.match;
 
-    console.log(handleStack);
-
-    if (preferedName && urlMatch) {
-      var name = preferedName + ' at (' + urlMatch[0] + ')';
-
-      var resourceLink = parseAndGerRerouceLink(name);
-    } else {
-      var resourceLink = parseAndGerRerouceLink(stackName);
+    if (name) {
+      stackName += ' with ' + name;
     }
+      
+    var resourceLink = parseAndGerRerouceLink(stackName);
 
     return resourceLink;
   },
@@ -554,16 +550,14 @@
           promise.row.value.innerHTML = '';
           promise.row.value.appendChild(div);
         }; break;
-        case 'json': {
-          var jsonValue = JSON.parse(data.value.json);
+        case 'keys': {
+          var keys = data.value.allKeys;
 
-          data.value.parsed = jsonValue;
-
-          textVal = 'JSON: { ' + Object.keys(jsonValue).join(' , ') + ' }';
+          textVal = 'Object: { ' + keys.join(', ') + ' }';
 
           var div = document.createElement('div');
 
-          div.className = 'json-value';
+          div.className = 'keys-value';
           div.textContent = textVal;
 
           promise.row.value.innerHTML = '';

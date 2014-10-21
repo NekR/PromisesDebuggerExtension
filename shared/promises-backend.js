@@ -45,7 +45,13 @@ console.log('PromisesDebugger inside');
               state: val.type
             };
 
-          if (value instanceof originalPromise) {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            value = value.valueOf();
+          }
+
+          if (value instanceof originalPromise ||
+              value instanceof PromiseForInstanceCheck
+          ) {
             value = PromisesDebugger.promiseByProxy.get(value) || value;
 
             var record = PromisesDebugger.promiseToRecord.get(value);
@@ -83,24 +89,18 @@ console.log('PromisesDebugger inside');
               type: 'array'
             };
           } else if (value && typeof value === 'object') {
-            if (isPlainObject(value)) {
-              try {
-                value = JSON.stringify(value, function replacer(key, val) {
-                  if (typeof val === 'string' && val.length > 30) {
-                    return val.slice(0, 30) + ' ...';
-                  }
+            var keys = Object.keys(value),
+              allKeys = Object.getOwnPropertyNames(value),
+              objStr = value + '',
+              objName = objStr.match(/^\[object (\w+?)\]$/);
 
-                  return val;
-                }, '  ');
-              } catch (e) {
+            objName = objName ? objName[1] : objStr;
 
-              }
-            }
-
-            if (typeof value === 'string') {
+            if (keys && (keys.length || allKeys.length)) {
               sendData.value = {
-                type: 'json',
-                json: value
+                type: 'keys',
+                keys: keys,
+                allKeys: allKeys
               };
             } else {
               sendData.value = {
@@ -140,7 +140,8 @@ console.log('PromisesDebugger inside');
       },
       topLevel = registeredData.topLevel,
       parentPromise,
-      name = params && params.name || '';
+      name = params && params.name || '',
+      caller = params.caller;
 
       this.debugging.push(registeredData);
 
@@ -158,7 +159,8 @@ console.log('PromisesDebugger inside');
           topLevel: topLevel,
           stack: registeredData.stack,
           parentPromise: parentPromise,
-          name: name
+          name: name,
+          caller: caller
         }
       });
 
@@ -231,7 +233,8 @@ console.log('PromisesDebugger inside');
     originalPromiseResolve = recurciveGetDesc(originalPromise, 'resolve'),
     originalPromiseReject = recurciveGetDesc(originalPromise, 'reject'),
     originalPromiseAll = recurciveGetDesc(originalPromise, 'all'),
-    originalPromiseRace = recurciveGetDesc(originalPromise, 'race');
+    originalPromiseRace = recurciveGetDesc(originalPromise, 'race'),
+    PromiseForInstanceCheck;
 
   if (!global.Proxy) {
     var PromiseProxy = (function() {
@@ -329,7 +332,7 @@ console.log('PromisesDebugger inside');
   };
 
   var promiseWrap = function(promise, registeredData) {
-    var doThen = function(onResolve, onReject, name) {
+    var doThen = function(onResolve, onReject, caller) {
       var resolve = function(val) {
         chaingRegistered.setValue({
           type: 'value',
@@ -420,13 +423,13 @@ console.log('PromisesDebugger inside');
         result.then(resolve, reject);
       }
 
-      name = 'Promise.' + name + '()';
+      caller = 'Promise.' + caller + '()';
 
       var chaingRegistered = PromisesDebugger.register(result, {
         topLevel: false,
         stack: stack,
         parent: registeredData,
-        name: name
+        caller: caller
       });
 
       return promiseWrap(result, chaingRegistered);
@@ -453,7 +456,7 @@ console.log('PromisesDebugger inside');
   };
 
   Object.defineProperty(global, 'Promise', {
-    value: makeProxy(originalPromise, {
+    value: PromiseForInstanceCheck = makeProxy(originalPromise, {
       construct: function(Promise, args) {
         var executor = args[0],
           registerValue,
@@ -503,10 +506,11 @@ console.log('PromisesDebugger inside');
           var stack = e.stack;
         }
 
-        name = 'new Promise(' + (name || '') + ')';
+        var caller = 'new Promise()';
 
         var registeredData = PromisesDebugger.register(promise, {
           stack: stack,
+          caller: caller,
           name: name
         });
 
@@ -568,7 +572,7 @@ console.log('PromisesDebugger inside');
 
     var registeredData = PromisesDebugger.register(result, {
       stack: stack,
-      name: 'Promise.resolve()'
+      caller: 'Promise.resolve()'
     });
 
     setTimeout(function() {
@@ -593,7 +597,7 @@ console.log('PromisesDebugger inside');
 
     var registeredData = PromisesDebugger.register(result, {
       stack: stack,
-      name: 'Promise.reject()'
+      caller: 'Promise.reject()'
     });
 
     setTimeout(function() {
@@ -618,7 +622,7 @@ console.log('PromisesDebugger inside');
 
     var registeredData = PromisesDebugger.register(result, {
       stack: stack,
-      name: 'Promise.all()'
+      caller: 'Promise.all()'
     });
 
     result.then(function(val) {
@@ -651,7 +655,7 @@ console.log('PromisesDebugger inside');
 
     var registeredData = PromisesDebugger.register(result, {
       stack: stack,
-      name: 'Promise.race()'
+      caller: 'Promise.race()'
     });
 
     result.then(function(val) {

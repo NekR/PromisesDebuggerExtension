@@ -99,7 +99,7 @@ body {
 	text-overflow: ellipsis;
 }
 
-.json-value {
+.keys-value {
 	max-height: 100px;
 	overflow: hidden;
 }
@@ -144,8 +144,30 @@ body {
 	border-radius: 0;
 }
 
+.pd-header-icons {
+	height: 20px;
+	float: right;
+	margin-top: 2px;
+}
 
+.pd-header-icons .icon {
+	height: 20px;
+	font-size: 19px;
+	line-height: 19px;
+	padding: 0 !important;
+	margin: 0 !important;
+	display: inline-block !important;
+	margin-left: 10px !important;
+	width: 30px !important;
+	padding-left: 10px !important;
+	border-left: 1px solid #ccc;
+}
 
+.pd-main-header {
+	z-index: 10;
+	border-bottom: 1px solid #cacaca !important;
+	line-height: 1.40 !important;
+}
 
 
 
@@ -229,7 +251,7 @@ body {
 	vertical-align: middle;
 	font-weight: bold;
 }
-.pd-table-head .pd-table-cell-header:first-child {
+/*.pd-table-head .pd-table-cell-header:first-child {
 	border-radius: 5px 0px 0px 0px;
 }
 
@@ -247,7 +269,7 @@ body {
 
 .pd-table-foot .pd-table-cell-header:only-child {
 	border-radius: 0px 0px 5px 5px;
-}
+}*/
 /* Table Cells */
 .pd-table-cell {
 	padding: 0.40em 0.7em;
