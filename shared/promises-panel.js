@@ -102,7 +102,7 @@
       tbody.hidden = true;
     }
   },
-  parseAndGerRerouceLink = function(input) {
+  extractUrl = function(input) {
     var R_URL = /((?:\w+?\:\/\/)[\s\S]*?):(\d+):(\d+)/g;
     var R_FX_ANONYMOUR_URL = /((?:\w+?\:\/\/)[\s\S]*?) line (\d+) > (?:[\s\S]*)/g;
 
@@ -120,6 +120,23 @@
         break;
       }
     }
+
+    if (urlMatch) {
+      return {
+        match: urlMatch,
+        usedReg: usedReg
+      };
+    } else {
+      return null;
+    }
+  },
+  parseAndGerRerouceLink = function(input, url) {
+    if (!url) {
+      url = extractUrl(input);
+    }
+
+    var urlMatch = url && url.match,
+      usedReg = url && url.usedReg;
 
     if (urlMatch) {
       var a = document.createElement('a'),
@@ -171,10 +188,20 @@
 
     return resourceLink;
   },
-  getNameFromStack = function(handledStack, i) {
-    var name = handledStack.lines[0];
+  getNameFromStack = function(handledStack, i, preferedName) {
+    var stackName = handledStack.lines[0],
+      url = extractUrl(stackName),
+      urlMatch = url && url.match;
 
-    var resourceLink = parseAndGerRerouceLink(name);
+    console.log(handleStack);
+
+    if (preferedName && urlMatch) {
+      var name = preferedName + ' at (' + urlMatch[0] + ')';
+
+      var resourceLink = parseAndGerRerouceLink(name);
+    } else {
+      var resourceLink = parseAndGerRerouceLink(stackName);
+    }
 
     return resourceLink;
   },
@@ -329,7 +356,7 @@
       }
 
       var row = createPromiseRow(),
-        name = getNameFromStack(data.handledStack, 2),
+        name = getNameFromStack(data.handledStack, 2, data.name),
         stackCont = document.createElement('div'),
         chainCont = document.createElement('div');
 

@@ -139,7 +139,8 @@ console.log('PromisesDebugger inside');
         topLevel: params ? params.topLevel !== false : true,
       },
       topLevel = registeredData.topLevel,
-      parentPromise;
+      parentPromise,
+      name = params && params.name || '';
 
       this.debugging.push(registeredData);
 
@@ -156,7 +157,8 @@ console.log('PromisesDebugger inside');
           id: registeredData.id,
           topLevel: topLevel,
           stack: registeredData.stack,
-          parentPromise: parentPromise
+          parentPromise: parentPromise,
+          name: name
         }
       });
 
@@ -327,7 +329,7 @@ console.log('PromisesDebugger inside');
   };
 
   var promiseWrap = function(promise, registeredData) {
-    var thenWrap = function(onResolve, onReject) {
+    var doThen = function(onResolve, onReject, name) {
       var resolve = function(val) {
         chaingRegistered.setValue({
           type: 'value',
@@ -418,77 +420,28 @@ console.log('PromisesDebugger inside');
         result.then(resolve, reject);
       }
 
+      name = 'Promise.' + name + '()';
+
       var chaingRegistered = PromisesDebugger.register(result, {
         topLevel: false,
         stack: stack,
-        parent: registeredData
+        parent: registeredData,
+        name: name
       });
 
       return promiseWrap(result, chaingRegistered);
     },
+    thenWrap = function(onResolve, onReject) {
+      return doThen.call(this, onResolve, onReject, 'then');
+    },
     catchWrap = function(onReject) {
-      var reject = function(val) {
-        chaingRegistered.setValue({
-          type: 'error',
-          value: val
-        });
-      };
-
-      var result = promise.catch(function onRejectWrap(val) {
-        if (typeof onReject !== 'function') return;
-
-        if (isChrome) {
-          var ret = new originalPromise(function(DONT_USE, retReject) {
-            setTimeout(function() {
-              ret.then(null, function(b) {
-                reject(b);
-              });
-            }, 0);
-
-            var retVal = onReject.call(promise, val);
-
-            // suppress native rethrow
-            // setTimeout(function() {
-              // try {
-                retReject(retVal);
-              // } catch (e) {};
-            // }, 0);
-          });
-
-          return ret;
-        }
-
-        var val = onReject.call(promise, val);
-        // reject(val);
-        return val;
-      });
-
-      try {
-        throw new Error();
-      } catch (e) {
-        var stack = e.stack;
-      }
-
-      if (!isChrome) {
-        result.catch(reject);
-      }
-
-      var chaingRegistered = PromisesDebugger.register(result, {
-        topLevel: false,
-        stack: stack,
-        parent: registeredData
-      });
-
-      return promiseWrap(result, chaingRegistered);
+      return doThen.call(this, null, onReject, 'catch');
     };
 
     var proxy = makeProxy(promise, {
       get: function(target, name) {
         if (name === 'then') return thenWrap;
-        // if (name === 'catch') return catchWrap;
-        if (name === 'catch') return function(onReject) {
-          return thenWrap.call(this, null, onReject);
-        };
+        if (name === 'catch') return catchWrap;
 
         return target[name];
       }
@@ -503,7 +456,10 @@ console.log('PromisesDebugger inside');
     value: makeProxy(originalPromise, {
       construct: function(Promise, args) {
         var executor = args[0],
-          registerValue;
+          registerValue,
+          name = executor.name;
+
+        if (typeof executor !== 'function') throw new TypeError('...');
 
         var promise = new Promise(function(resolve, reject) {
           var result = executor.call(this, function resolveWrap(val) {
@@ -547,8 +503,11 @@ console.log('PromisesDebugger inside');
           var stack = e.stack;
         }
 
+        name = 'new Promise(' + (name || '') + ')';
+
         var registeredData = PromisesDebugger.register(promise, {
-          stack: stack
+          stack: stack,
+          name: name
         });
 
         promise.then(function(val) {
@@ -608,7 +567,8 @@ console.log('PromisesDebugger inside');
     }
 
     var registeredData = PromisesDebugger.register(result, {
-      stack: stack
+      stack: stack,
+      name: 'Promise.resolve()'
     });
 
     setTimeout(function() {
@@ -632,7 +592,8 @@ console.log('PromisesDebugger inside');
     }
 
     var registeredData = PromisesDebugger.register(result, {
-      stack: stack
+      stack: stack,
+      name: 'Promise.reject()'
     });
 
     setTimeout(function() {
@@ -656,7 +617,8 @@ console.log('PromisesDebugger inside');
     }
 
     var registeredData = PromisesDebugger.register(result, {
-      stack: stack
+      stack: stack,
+      name: 'Promise.all()'
     });
 
     result.then(function(val) {
@@ -688,7 +650,8 @@ console.log('PromisesDebugger inside');
     }
 
     var registeredData = PromisesDebugger.register(result, {
-      stack: stack
+      stack: stack,
+      name: 'Promise.race()'
     });
 
     result.then(function(val) {

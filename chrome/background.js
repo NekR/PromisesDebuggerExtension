@@ -42,15 +42,8 @@
   },
   attachToTarget = function(inspectData, callback) {
     chrome.tabs.executeScript(inspectData.tabId, {
-      code: 'var backendCode = ' + JSON.stringify(debugBackendCode) + ';' +
-        'this.evalBackend && this.evalBackend(backendCode);',
-      runAt: 'document_start'
-    }, function() {
-      
-    });
-
-    chrome.tabs.executeScript(inspectData.tabId, {
-      file: 'promises-frontend.js',
+      code: ';var backendCode = ' + JSON.stringify(debugBackendCode) + ';' +
+        debugFrontendCode,
       runAt: 'document_start'
     }, function() {
       if (callback) {
@@ -59,10 +52,10 @@
     });
   };
 
-  var getDebugBackendCode = function() {
+  var getCode = function(url) {
     var xhr = new XMLHttpRequest();
 
-    xhr.open('GET', 'shared/promises-backend.js', false);
+    xhr.open('GET', url, false);
     xhr.send();
 
     return xhr.response;
@@ -216,5 +209,6 @@
     port.onDisconnect.addListener(disconnectHandler);
   });
 
-  var debugBackendCode = getDebugBackendCode();
+  var debugBackendCode = getCode('shared/promises-backend.js'),
+    debugFrontendCode = getCode('promises-frontend.js');
 }(this));

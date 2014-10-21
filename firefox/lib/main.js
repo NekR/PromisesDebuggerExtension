@@ -1,4 +1,4 @@
-const {Cc, Ci, Cu, Cr} = require("chrome");
+const { Cc, Ci, Cu, Cr } = require("chrome");
 const self = require("sdk/self");
   
 const { gDevTools } = Cu.import("resource:///modules/devtools/gDevTools.jsm", {});
@@ -6,9 +6,9 @@ const { DevToolsUtils } = Cu.import("resource://gre/modules/devtools/DevToolsUti
 const devtools = Cu.import("resource://gre/modules/devtools/Loader.jsm", {}).devtools;
 
 const events = require("sdk/event/core");
-const {on, once, off, emit} = events;
-const {setTimeout, clearTimeout} = require('sdk/timers');
-const {readURI} = require('sdk/net/url');
+const { on, once, off, emit } = events;
+const { setTimeout, clearTimeout } = require('sdk/timers');
+const { readURI } = require('sdk/net/url');
 
 
 console.log('Start');
@@ -21,33 +21,6 @@ var log = {
     args.unshift(this.prefix);
     console.warn(...args);
   }
-};
-
-var wrapPromises = function(contentWindow, unwrappedWindow, toolbox) {
-  let PromiseDescriptor = getDesc(unwrappedWindow, 'Promise');
-
-  console.log(PromiseDescriptor);
-  console.log('bind values');
-
-  unwrappedWindow.Z = function() {
-    this.test = 1;
-  };
-
-  var PromiseProxy =  new Proxy(unwrappedWindow.Promise, {
-    construct: function(Promise, args) {
-      console.log('Construct Promise:', arguments);
-
-      return new Promise(args[0]);
-    }
-  });
-
-  Object.defineProperty(unwrappedWindow, 'Promise', {
-    value: PromiseProxy,
-    // if false we cannot override
-    configurable: true,
-    writable: PromiseDescriptor.writable,
-    enumerable: PromiseDescriptor.enumerable
-  });
 };
 
 var buildProgressQI = function(obj) {
@@ -100,6 +73,11 @@ var PromisesPanel = function(window, toolbox) {
   } else {
     this.waitAttachRequest();
   }
+
+  if (!this.target.isLocalTab) {
+    this.toolbox.loadTool('jsdebugger');
+    this.toolbox.loadTool('webconsole');
+  }
 };
 
 PromisesPanel.prototype = {
@@ -124,9 +102,46 @@ PromisesPanel.prototype = {
       return;
     }
 
-    inspectedWindow.eval(promisesBackendCode);
+    if (this.target.isLocalTab) {
+      inspectedWindow.eval(promisesBackendCode);
+    } else {
+      this.toolbox.loadTool('jsdebugger').then((Debugger) => {
+        var DebuggerController = Debugger._controller;
+
+        var doEval = () => {
+          this.toolbox.loadTool('webconsole').then(function(WebConsole) {
+            WebConsole.hud.jsterm.requestEvaluation(promisesBackendCode).then(function() {
+              console.log('zzz', arguments);
+              DebuggerController.activeThread.resume(function() {
+                console.log('resume', arguments);
+              });
+            }, function() {
+              console.log('xxx', arguments);
+            });
+          });
+        };
+
+        if (DebuggerController.activeThread.state === 'paused') {
+          doEval();
+        } else {
+          DebuggerController.activeThread.interrupt(function(res) {
+            console.log('interrupt:', res);
+
+            doEval()
+          });
+        }
+      });
+    }
   },
   startWaitReloads: function() {
+    if (!this.target.isLocalTab) {
+      this.target.on('will-navigate', () => {
+        this.onReload();
+      });
+
+      return;
+    }
+
     let webProgress = this.webProgress;
 
     // not really need buildListener with arrow functions

@@ -1,4 +1,4 @@
-(function(global) {
+;(function(global) {
   console.log('inject isWatchingPage:', global.isWatchingPage);
 
   if (global.isWatchingPage) return;
