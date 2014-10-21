@@ -7,7 +7,6 @@
     if (details.frameId !== 0) return;
 
     var inspectData = inspectionsMap[details.tabId];
-
     if (!inspectData) return;
 
     attachToTarget(inspectData);
@@ -18,8 +17,9 @@
     if (details.frameId !== 0) return;
 
     var inspectData = inspectionsMap[details.tabId];
-
     if (!inspectData) return;
+
+    attachToTarget(inspectData);
 
     inspectData.port.postMessage({
       action: 'reload'
@@ -42,7 +42,7 @@
   },
   attachToTarget = function(inspectData, callback) {
     chrome.tabs.executeScript(inspectData.tabId, {
-      code: ';var backendCode = ' + JSON.stringify(debugBackendCode) + ';' +
+      code: ';var backendCode = ' + debugBackendCode + ';' +
         debugFrontendCode,
       runAt: 'document_start'
     }, function() {
@@ -209,6 +209,6 @@
     port.onDisconnect.addListener(disconnectHandler);
   });
 
-  var debugBackendCode = getCode('shared/promises-backend.js'),
+  var debugBackendCode = JSON.stringify(getCode('shared/promises-backend.js')),
     debugFrontendCode = getCode('promises-frontend.js');
 }(this));
