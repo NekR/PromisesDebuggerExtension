@@ -219,7 +219,7 @@
       message;
 
     if (isChrome && firstLine &&
-      firstLine.indexOf('at') === -1 && firstLine.search(/error/i) !== -1) {
+      firstLine.search(/\bat\b/) === -1 && firstLine.search(/error/i) !== -1) {
       message = firstLine;
       lines = lines.slice(1);
     }
@@ -244,10 +244,10 @@
       }
     }
 
-    if (!newLines.length) {
-      /*// fallback to original stack
-      newLines = lines;*/
+    /*// fallback to original stack
+    newLines = lines;*/
 
+    if (!newLines.length) {
       return null;
     }
 
@@ -568,10 +568,10 @@
           promise.row.value.textContent = textVal;
         }; break;
         case 'error': (function() {
-          var handledStack = handleStack(data.value.error.stack);
+          var handledStack = handleStack(data.value.error.stack),
+            errMessage = (handledStack.message || data.value.error.message || 'Error:');
 
-          var val = '<i class="attention icon"></i> ' +
-              (data.value.error.message || handledStack.message || 'Error') + ' ',
+          var val = '<i class="attention icon"></i> ' + errMessage + ' ',
             wrap = document.createElement('div'),
             errorCont = document.createElement('div');
 
@@ -598,7 +598,7 @@
 
             var firstDiv = document.createElement('div');
 
-            firstDiv.textContent = data.value.error.message;
+            firstDiv.textContent = errMessage;
             fragment.appendChild(firstDiv);
 
             handledStack.lines.forEach(function(line) {
