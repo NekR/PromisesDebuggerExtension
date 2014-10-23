@@ -66,8 +66,7 @@ providers.forEach(function(provider) {
 
 readURI(self.data.url('shared/promises-backend.js'))
   .then(function(code) {
-    promisesBackendCode = code + promisesProvidersCode +
-      '; PromisesDebugger.initProviders();';
+    promisesBackendCode = code + promisesProvidersCode;
   });
 
 var PromisesPanel = function(window, toolbox) {

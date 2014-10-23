@@ -8,19 +8,46 @@ console.log('PromisesDebugger inside');
   var hasOwn = Object.prototype.hasOwnProperty;
 
   var PromisesDebugger = {
-    debugging: [],
-    topLevel: [],
-    diffs: [],
     promiseToRecord: new WeakMap(),
     promiseByProxy: new WeakMap(),
     nextId: 0,
     providers: {},
-    providerResults: {},
 
     get: function(promise) {
       return PromisesDebugger.promiseToRecord.get(promise);
     },
+    requestUpdate: function(diffData) {
+      setTimeout(function() {
+
+        // console.log('requestUpdate');
+
+        window.postMessage({
+          PromisesDebugger: true,
+          message: diffData
+        }, '*');
+      }, 0);
+    },
+    registerProvider: function(name, config) {
+      var provider = new Provider(name, config);
+
+      PromisesDebugger.providers[name] = provider;
+
+      return provider;
+    }
+  };
+
+  var Provider = function(name, config) {
+    this.name = name;
+    this.config = config;
+  };
+
+  Provider.prototype = {
+    get: function(promise) {
+      return PromisesDebugger.promiseToRecord.get(promise);
+    },
     register: function(promise, params) {
+      var provider = this;
+
       var registeredData = {
         promise: promise,
         setValue: function(val) {
@@ -34,10 +61,10 @@ console.log('PromisesDebugger inside');
             value = value.valueOf();
           }
 
-          var isPromise = PromisesDebugger.isPromise(value);
+          var isPromise;
 
-          if (isPromise) {
-            var record = PromisesDebugger.get(isPromise);
+          if (provider.isPromise && (isPromise = provider.isPromise(value))) {
+            var record = provider.get(isPromise);
 
             sendData.value = {
               type: 'promise',
@@ -116,26 +143,25 @@ console.log('PromisesDebugger inside');
             data: sendData
           });
         },
-        id: this.nextId++,
+        id: PromisesDebugger.nextId++,
         chaining: [],
         stack: params && params.stack,
         topLevel: params ? params.topLevel !== false : true,
+        provider: provider.name
       },
       topLevel = registeredData.topLevel,
       parentPromise,
       name = params && params.name || '',
       caller = params.caller;
 
-      this.debugging.push(registeredData);
-
       if (topLevel) {
-        this.topLevel.push(registeredData);
+        
       } else {
         params.parent.chaining.push(registeredData);
         parentPromise = params.parent.id;
       }
 
-      this.requestUpdate({
+      PromisesDebugger.requestUpdate({
         event: 'create',
         data: {
           id: registeredData.id,
@@ -151,94 +177,14 @@ console.log('PromisesDebugger inside');
         registeredData.setValue(params.value);
       }
 
-      this.promiseToRecord.set(promise, registeredData);
-
+      PromisesDebugger.promiseToRecord.set(promise, registeredData);
       promise.__recordData__ = registeredData;
 
       return registeredData;
     },
-    dumpTopLevel: function() {
-      this.dumpArray(this.topLevel, 'TopLevel Promises');
-    },
-    dumpArray: function(array, title) {
-      console.groupCollapsed(title);
-
-      array.concat().reverse().forEach(function(record, i) {
-        var data;
-
-        console.groupCollapsed('Promise ' + i);
-
-        if (!hasOwn.call(record, 'value')) {
-          data = {
-            PromiseValue: '[[No Value]]',
-            PromiseStatus: 'Pending'
-          };
-        }
-
-        if (record.value.type === 'error') {
-          data = {
-            PromiseValue: record.value.value,
-            PromiseStatus: 'Error'
-          };
-        } else {
-          data = {
-            PromiseValue: typeof record.value.value,
-            PromiseStatus: 'OK'
-          };
-        }
-
-        console.log('PromiseValue:', data.PromiseValue);
-        console.log('PromiseStatus:', data.PromiseStatus);
-        if (record.chaining.length) {
-          PromisesDebugger.dumpArray(record.chaining, 'Chaining Promises');
-        }
-
-        console.groupEnd();
-      });
-
-      console.groupEnd();
-    },
-    requestUpdate: function(diffData) {
-      setTimeout(function() {
-
-        // console.log('requestUpdate');
-
-        window.postMessage({
-          PromisesDebugger: true,
-          message: diffData
-        }, '*');
-      }, 0);
-    },
-    initProviders: function() {
-      Object.keys(PromisesDebugger.providers).forEach(function(key) {
-        var provider = PromisesDebugger.providers[key];
-        
-        var result = provider();
-
-        if (result) {
-          PromisesDebugger.providerResults[key] = result;
-        }
-      });
-    },
-    isPromise: function(promise) {
-      var result;
-
-      Object.keys(PromisesDebugger.providerResults).some(function(key) {
-        var provider = PromisesDebugger.providerResults[key];
-
-        if (provider && provider.isPromise) {
-          var isPromise = provider.isPromise(promise);
-
-          if (isPromise) {
-            result = isPromise;
-            return true;
-          }
-        }
-      });
-
-      return result;
-    }
   };
+
+  PromisesDebugger.Provider = Provider;
 
   window.PromisesDebugger = PromisesDebugger;
 }(this));

@@ -223,8 +223,7 @@
         code + '}(PromisesDebugger, this));';
     });
 
-    debugBackendCode = debugBackendCode + debugProvidersCode +
-      '; PromisesDebugger.initProviders();';
+    debugBackendCode = debugBackendCode + debugProvidersCode;
 
     var injectCode = ';var backendCode = ' + JSON.stringify(debugBackendCode) + ';' +
         debugFrontendCode;
