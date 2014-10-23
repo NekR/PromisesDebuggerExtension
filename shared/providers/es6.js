@@ -345,11 +345,7 @@ Object.defineProperty(global, 'Promise', {
 var fake = {};
 
 fake.resolve = function(val) {
-  var result = originalPromiseResolve.value.call(originalPromise, val),
-    value = {
-      type: 'value',
-      value: val
-    };
+  var result = originalPromiseResolve.value.call(originalPromise, val);
 
   try {
     throw new Error();
@@ -362,19 +358,18 @@ fake.resolve = function(val) {
     caller: 'Promise.resolve()'
   });
 
-  setTimeout(function() {
-    registeredData.setValue(value);
-  }, 0);
+  result.then(function(val) {
+    registeredData.setValue({
+      type: 'value',
+      value: val
+    });
+  });
 
   return promiseWrap(result, registeredData);
 };
 
 fake.reject = function(val) {
-  var result = originalPromiseReject.value.call(originalPromise, val),
-    value = {
-      type: 'error',
-      value: val
-    };
+  var result = originalPromiseReject.value.call(originalPromise, val);
 
   try {
     throw new Error();
@@ -387,9 +382,12 @@ fake.reject = function(val) {
     caller: 'Promise.reject()'
   });
 
-  setTimeout(function() {
-    registeredData.setValue(value);
-  }, 0);
+  result.then(null, function(val) {
+    registeredData.setValue({
+      type: 'error',
+      value: val
+    });
+  });
 
   return promiseWrap(result, registeredData);
 };
