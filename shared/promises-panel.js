@@ -2,7 +2,8 @@
   var reloadButton = document.getElementById('reload'),
     attachButton = document.getElementById('attach'),
     clearButton = document.getElementById('clear'),
-    toggleAttach = document.getElementById('toggle-attach');
+    toggleAttach = document.getElementById('toggle-attach'),
+    settingsButton = document.getElementById('settings-button');
 
   var isChrome = typeof chrome !== 'undefined';
 
@@ -27,6 +28,16 @@
     } else {
       doDetach();
     }
+  });
+
+  settingsButton.addEventListener('click', function() {
+    var settings = document.getElementById('settings');
+
+    settings.hidden = false;
+    settings.querySelector('.close').onclick = function() {
+      this.onclick = null;
+      settings.hidden = true;
+    };
   });
 
   var doAttach = function() {

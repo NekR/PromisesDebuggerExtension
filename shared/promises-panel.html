@@ -13,8 +13,9 @@
 					<div class="pd-header-icons">
 						<i class="setting icon link"
 							title="Settings"
-							id="settings"
+							id="settings-button"
 							role="button"
+							hidden
 						></i><i class="ban circle icon link"
 							title="Clear"
 							id="clear"
@@ -72,9 +73,21 @@
 				</div>
 			</div>
 		</div>
-		<script src="ui/jquery-2.1.1.min.js"></script>
-		<script src="ui/javascript/semantic.js"></script>
+		<div id="settings" class="pd-dialog" hidden>
+			<div class="ui modal">
+				<i class="close icon"
+					role="button"
+				></i>
+				<div class="header">
+					Settings
+				</div>
+				<div class="content">
+					<div class="ui vertical segment">
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<script src="promises-panel.js"></script>
-		<script src="js/panel-ui.js"></script>
 	</body>
 </html>

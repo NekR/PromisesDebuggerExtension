@@ -21,7 +21,7 @@ body {
 	top: 0;
 	left: 0;
 	right: 0;
-	z-index: 9999;
+	z-index: 100;
 }
 
 #content {
@@ -251,6 +251,23 @@ body {
 	vertical-align: middle;
 	font-weight: bold;
 }
+
+.pd-dialog {
+	background-color: rgba(0, 0, 0, 0.4);
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	z-index: 1000;
+}
+
+.pd-dialog .ui.modal {
+	display: initial !important;
+	top: 50px !important;
+	box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
 /*.pd-table-head .pd-table-cell-header:first-child {
 	border-radius: 5px 0px 0px 0px;
 }
