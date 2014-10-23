@@ -8,7 +8,7 @@ const devtools = Cu.import("resource://gre/modules/devtools/Loader.jsm", {}).dev
 const events = require("sdk/event/core");
 const { on, once, off, emit } = events;
 const { setTimeout, clearTimeout } = require('sdk/timers');
-const { readURI } = require('sdk/net/url');
+const { readURI, readURISync } = require('sdk/net/url');
 
 
 console.log('Start');
@@ -52,10 +52,22 @@ var buildProgressListener = function(obj, methods) {
 };
 
 let promisesBackendCode;
+let promisesProvidersCode = '';
+let providers = [
+  'es6'
+];
+
+providers.forEach(function(provider) {
+  var code = readURISync(self.data.url('shared/providers/' + provider + '.js'));
+
+  promisesProvidersCode += ';(function(PromisesDebugger, global) {' +
+    code + '}(PromisesDebugger, this));';
+});
 
 readURI(self.data.url('shared/promises-backend.js'))
   .then(function(code) {
-    promisesBackendCode = code;
+    promisesBackendCode = code + promisesProvidersCode +
+      '; PromisesDebugger.initProviders();';
   });
 
 var PromisesPanel = function(window, toolbox) {

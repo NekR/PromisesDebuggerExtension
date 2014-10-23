@@ -42,8 +42,7 @@
   },
   attachToTarget = function(inspectData, callback) {
     chrome.tabs.executeScript(inspectData.tabId, {
-      code: ';var backendCode = ' + debugBackendCode + ';' +
-        debugFrontendCode,
+      code: injectCode,
       runAt: 'document_start'
     }, function() {
       if (callback) {
@@ -209,6 +208,24 @@
     port.onDisconnect.addListener(disconnectHandler);
   });
 
-  var debugBackendCode = JSON.stringify(getCode('shared/promises-backend.js')),
-    debugFrontendCode = getCode('promises-frontend.js');
+  var providers = [
+    'es6'
+  ];
+
+  var debugBackendCode = getCode('shared/promises-backend.js'),
+    debugFrontendCode = getCode('promises-frontend.js'),
+    debugProvidersCode = '';
+
+    providers.forEach(function(provider) {
+      var code = getCode('shared/providers/' + provider + '.js');
+
+      debugProvidersCode += ';(function(PromisesDebugger, global) {' +
+        code + '}(PromisesDebugger, this));';
+    });
+
+    debugBackendCode = debugBackendCode + debugProvidersCode +
+      '; PromisesDebugger.initProviders();';
+
+    var injectCode = ';var backendCode = ' + JSON.stringify(debugBackendCode) + ';' +
+        debugFrontendCode;
 }(this));

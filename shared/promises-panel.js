@@ -235,28 +235,29 @@
       lines = lines.slice(1);
     }
 
-    while (i < lines.length) {
-      line = lines[i];
-      ++i;
+    if (!PromisesPanel.settings.show_full_stack) {
+      while (i < lines.length) {
+        line = lines[i];
+        ++i;
 
-      if (
-        line && (
-          line.indexOf('(native)') !== -1 ||
-          line.indexOf('(<anonymous>:') !== -1 ||
-          line.indexOf('resource://') !== -1 ||
-          line.indexOf('jar:file://') !== -1
-        )
-      ) {
-        continue;
-      }
+        if (
+          line && (
+            line.indexOf('(native)') !== -1 ||
+            line.indexOf('(<anonymous>:') !== -1 ||
+            line.indexOf('resource://') !== -1 ||
+            line.indexOf('jar:file://') !== -1
+          )
+        ) {
+          continue;
+        }
 
-      if (line) {
-        newLines.push(line);
+        if (line) {
+          newLines.push(line);
+        }
       }
+    } else {
+      newLines = lines;
     }
-
-    /*// fallback to original stack
-    newLines = lines;*/
 
     if (!newLines.length) {
       return null;
@@ -669,4 +670,22 @@
       actions[data.action](data.message);
     }
   });
+
+  window.PromisesPanel = {
+    updateSetting: function(setting, value) {
+      var settingsActors = PromisesPanel.settingsActors;
+
+      if (settingsActors.hasOwnProperty(setting)) {
+        settingsActors[setting](value);
+      }
+    },
+    settingsActors: {
+      show_full_stack: function(value) {
+        PromisesPanel.settings.show_full_stack = !!value;
+      }
+    },
+    settings: {
+      show_full_stack: false
+    }
+  };
 }());

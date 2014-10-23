@@ -169,6 +169,9 @@ body {
 	line-height: 1.40 !important;
 }
 
+[data-control="checkbox"][data-checked="true"] {
+	color: green;
+}
 
 
 /* ####################### Table ###################### */

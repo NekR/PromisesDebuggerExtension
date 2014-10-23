@@ -15,7 +15,6 @@
 							title="Settings"
 							id="settings-button"
 							role="button"
-							hidden
 						></i><i class="ban circle icon link"
 							title="Clear"
 							id="clear"
@@ -82,12 +81,46 @@
 					Settings
 				</div>
 				<div class="content">
-					<div class="ui vertical segment">
+					<div class="ui vertical segment" data-control="settings">
+						<!-- <div><span data-control="checkbox"
+							data-setting="ignore_trailing_promises"
+						>
+							<label>
+								<input type="checkbox" checked>
+								Ignore trailing promises
+							</label>
+						</span></div> -->
+						<div><span data-control="checkbox"
+							data-setting="show_full_stack"
+						>
+							<label>
+								<input type="checkbox">
+								Show full stack trace
+							</label>
+						</span></div>
+						<!-- <div><span data-control="checkbox"
+							data-setting="console_rejections"
+						>
+							<label>
+								<input type="checkbox" checked>
+								Report rejections to console
+							</label>
+						</span></div> -->
+						<!-- <div><span data-control="checkbox"
+							data-setting="pause_on_caught"
+						>
+							<label>
+								<input type="checkbox" checked>
+								Pause on promise caught exceptions
+							</label>
+						</span></div> -->
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<script src="promises-panel.js"></script>
+		<script src="fw/cui/loader.js"></script>
+		<script src="bootstrap.js"></script>
 	</body>
 </html>
