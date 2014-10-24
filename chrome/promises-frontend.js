@@ -5,13 +5,62 @@
   global.isWatchingPage = true;
 
   var port,
-    messageBuffer = [];
+    messageBuffer = [],
+    isChrome = true;
 
   var onDisconnect = function() {
     window.removeEventListener('message', backendListener);
     port = null;
     messageBuffer = [];
     global.isAttached = false;
+  };
+
+  var handleEverStack = function(stack) {
+    var lines = stack.split(/(?:\n+|\->)/),
+      line,
+      i = 0,
+      newLines = [],
+      firstLine = lines[0],
+      message;
+
+    if (isChrome && firstLine &&
+      firstLine.search(/\bat\b/) === -1 && firstLine.search(/error/i) !== -1) {
+      message = firstLine;
+      lines = lines.slice(1);
+    }
+
+    if (true) {
+      while (i < lines.length) {
+        line = lines[i];
+        ++i;
+
+        if (
+          line && (
+            line.indexOf('(native)') !== -1 ||
+            line.indexOf('(<anonymous>:') !== -1 ||
+            line.indexOf('resource://') !== -1 ||
+            line.indexOf('jar:file://') !== -1
+          )
+        ) {
+          continue;
+        }
+
+        if (line) {
+          newLines.push(line);
+        }
+      }
+    } else {
+      newLines = lines;
+    }
+
+    if (!newLines.length) {
+      return null;
+    }
+
+    return {
+      lines: newLines,
+      message: message
+    };
   };
 
   global.registerDevToolsListeners = function(name) {
@@ -39,15 +88,6 @@
     console.log(port);
   };
 
-  global.getCurrentPromises = function() {
-    port.postMessage({
-      action: 'current_promises',
-      data: {
-        blah: 124
-      }
-    });
-  };
-
   var backendListener = function(e) {
     if (e.source !== window) {
       console.warn('bad source');
@@ -56,17 +96,13 @@
 
     var data = e.data;
 
-    if (data && data.PromisesDebugger) {
-      // console.log('PromisesDebugger:UpdateData');
+    if (!data || !data.PromisesDebugger) return;
 
+    if (data.method === 'requestUpdate') {
       var message = {
         action: 'update_data',
         data: data.message
       };
-
-      /*if (data.message.event === 'value') {
-        console.log(data.message.data.value);
-      }*/
 
 
       if (port) {
@@ -74,6 +110,8 @@
       } else {
         messageBuffer.push(message);
       }
+    } else if (data.method === 'reportError') {
+      global.reportError(data.message);
     }
   };
 
@@ -99,6 +137,37 @@
     document.documentElement.removeChild(script);
   };
 
+  global.reportError = function(message) {
+    var error = message.error,
+      provider = message.provider || '';
+
+    if (!error || !error.value) return;
+
+    var value = error.value,
+      message,
+      stack;
+
+    message = (value.name ? value.name + ': ' : '') + value.message;
+    stack = value.stack ? handleEverStack(value.stack) : null;
+
+    var showProvider = false;
+
+    console.groupCollapsed(
+      '%cPromise reject:' + (showProvider ? '[' + provider + ']:' : '') + ' ' + ((stack && stack.message) || message || '<no message>'),
+      'color: red;'
+    );
+
+    if (stack && stack.lines.length) {
+      stack.lines.forEach(function(line) {
+        console.log('%c' + line.trim(), 'color: red;');
+      });
+    } else {
+      console.log('%c<no stack>', 'color: red;')
+    }
+
+    console.groupEnd();
+  };
+
   (function() {
     console.log("hello from injected code");
 
@@ -108,4 +177,3 @@
     }
   }());
 }(this));
-

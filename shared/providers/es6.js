@@ -134,6 +134,10 @@ var promiseWrap = function(promise, registeredData) {
         value: val
       });
 
+      provider.reportError({
+        value: val
+      });
+
       return val;
     };
 
@@ -318,6 +322,10 @@ Object.defineProperty(global, 'Promise', {
 
         registerValue = value;
 
+        provider.reportError({
+          value: val
+        });
+
         registeredData.setValue(value);
       });
 
@@ -385,6 +393,10 @@ fake.reject = function(val) {
   result.then(null, function(val) {
     registeredData.setValue({
       type: 'error',
+      value: val
+    });
+
+    provider.reportError({
       value: val
     });
   });

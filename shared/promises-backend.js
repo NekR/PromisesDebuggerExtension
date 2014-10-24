@@ -9,7 +9,6 @@ console.log('PromisesDebugger inside');
 
   var PromisesDebugger = {
     promiseToRecord: new WeakMap(),
-    promiseByProxy: new WeakMap(),
     nextId: 0,
     providers: {},
 
@@ -23,6 +22,7 @@ console.log('PromisesDebugger inside');
 
         window.postMessage({
           PromisesDebugger: true,
+          method: 'requestUpdate',
           message: diffData
         }, '*');
       }, 0);
@@ -33,6 +33,34 @@ console.log('PromisesDebugger inside');
       PromisesDebugger.providers[name] = provider;
 
       return provider;
+    },
+    reportError: function(provider, error) {
+      var errValue = error.value;
+
+      if (errValue instanceof Error) {
+        var value = {
+          stack: error.value.stack,
+          message: error.value.message,
+          name: error.value.name
+        };
+      } else {
+        var value = {
+          message: errValue + ''
+        };
+      }
+
+      setTimeout(function() {
+        window.postMessage({
+          PromisesDebugger: true,
+          method: 'reportError',
+          message: {
+            error: {
+              value: value
+            },
+            provider: provider.name
+          }
+        }, '*');
+      }, 0);
     }
   };
 
@@ -44,6 +72,9 @@ console.log('PromisesDebugger inside');
   Provider.prototype = {
     get: function(promise) {
       return PromisesDebugger.promiseToRecord.get(promise);
+    },
+    reportError: function(error) {
+      PromisesDebugger.reportError(this, error);
     },
     register: function(promise, params) {
       var provider = this;
