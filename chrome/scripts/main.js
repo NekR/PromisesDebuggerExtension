@@ -1,1 +1,1 @@
-require('lib/background.js');
+require('lib/runtime.js');

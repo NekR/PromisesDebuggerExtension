@@ -14,7 +14,7 @@ exports.Prefs.prototype = {
   init: function() {
     var self = this;
 
-    this._prefs = storage.get(PREFS_KEY).then(function(prefs) {
+    this.ready = storage.get(PREFS_KEY).then(function(prefs) {
       if (!prefs) return self.load();
 
       return prefs;
@@ -22,23 +22,20 @@ exports.Prefs.prototype = {
       // do error log here
 
       return self.load();
+    }).then(function(prefs) {
+      self.local = prefs;
     });
   },
   get: function(key) {
-    return this._prefs.then(function(prefs) {
-      return prefs[key];
-    });
+    return this.local[key];
   },
   set: function(key, val) {
-    return this._prefs.then(function(prefs) {
-      prefs[key] = value;
-      return storage.set(PREFS_KEY, prefs);
-    });
+    this.local[key] = val;
+
+    storage.set(PREFS_KEY, this.local);
   },
   getAll: function() {
-    return this._prefs.then(function(prefs) {
-      return prefs;
-    });
+    return this.local;
   },
   load: function() {
     return ext.load(this.url).then(function(res) {

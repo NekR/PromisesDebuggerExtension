@@ -20,6 +20,8 @@ exports.loadSync = function(url) {
 };
 
 exports.load = function(url) {
+  var self = this;
+
   return new Promise(function(resolve, reject) {
     var xhr = new XMLHttpRequest();
     var loaded = false;
@@ -34,7 +36,7 @@ exports.load = function(url) {
       reject();
     };
 
-    xhr.open('GET', this.url(url), true);
+    xhr.open('GET', self.url(url), true);
     xhr.send();
   })
 };

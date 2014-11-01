@@ -8,15 +8,13 @@ const devtools = Cu.import("resource://gre/modules/devtools/Loader.jsm", {}).dev
 const events = require("sdk/event/core");
 const { on, once, off, emit } = events;
 const { setTimeout, clearTimeout } = require('sdk/timers');
-const { readURI, readURISync } = require('sdk/net/url');
 
-const { Logger } = require('lib/console.js');
+const { TargetLogger } = require('lib/target-logger.js');
 const prefs = new (require('shared/prefs.js').Prefs);
+const backend = require('shared/backend.js');
 
-prefs.getAll().then(function(val) {
-  console.log(val);
-}).then(function(val) {
-  console.error(val);
+prefs.ready.then(function() {
+  console.log(prefs.getAll());
 });
 
 console.log('Start');
@@ -58,24 +56,7 @@ var buildProgressListener = function(obj, methods) {
   return listener;
 };
 
-let promisesBackendCode;
-let promisesProvidersCode = '';
-let providers = [
-  'es6'
-];
-
-providers.forEach(function(provider) {
-  var code = readURISync(self.data.url('shared/providers/' + provider + '.js'));
-
-  promisesProvidersCode += ';(function(PromisesDebugger, global) {' +
-    code + '}(PromisesDebugger, this));';
-});
-
-readURI(
-  self.data.url('shared/promises-backend.js')
-).then(function(code) {
-  promisesBackendCode = code + promisesProvidersCode;
-});
+let promisesBackendCode = backend.getCode();
 
 var PromisesPanel = function(window, toolbox) {
   this.toolbox = toolbox;
@@ -120,7 +101,7 @@ var PromisesPanel = function(window, toolbox) {
 
   this.logger = this.toolbox.loadTool('webconsole').then(WebConsolePanel => {
     let ui = WebConsolePanel.hud.ui;
-    return new Logger(ui);
+    return new TargetLogger(ui);
   });
 };
 

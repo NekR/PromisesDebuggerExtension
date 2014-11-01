@@ -6,8 +6,8 @@
 	"show_full_stack": true,
 	// ignore promises which are auto created by then, but not handled (yet?)
 	"ignore_trailing_promises": true,
-	// log simple rejections like Promise.reject(); or reject in executor?
-	"log_rejections": true,
+
+	"log_caught_rejections": true,
 	// pause on errors in promise which has at least one catch handler
 	"pause_on_caught_errors": false
 }
