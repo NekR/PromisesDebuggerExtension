@@ -12,10 +12,10 @@ modules.load({
     'fw/cui/modules/ui.js',
     'fw/cui/modules/parser.js',
 
-    'modules/panel.js',
-    'modules/checkbox.js',
-    'modules/settings.js',
-    'modules/main.js'
+    'fw/modules/panel.js',
+    'fw/modules/checkbox.js',
+    'fw/modules/settings.js',
+    'fw/modules/main.js'
   ],
   url: 'fw/cui/modules.js',
   path: './',

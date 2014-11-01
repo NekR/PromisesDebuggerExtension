@@ -1,2 +1,4 @@
 firefox/data/shared
 chrome/shared
+node_modules/
+*.notes.txt

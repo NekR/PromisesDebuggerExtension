@@ -1,3 +1,5 @@
+var prefs = new (require('shared/prefs.js').Prefs);
+
 (function(global) {
   var inspections = new (global.Set || global.WeakSet),
     inspectionsMap = {},

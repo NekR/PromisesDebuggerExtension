@@ -15,7 +15,10 @@
   ],
   "devtools_page": "devtools.html",
   "background": {
-    "scripts": ["background.js"],
+    "scripts": [
+      "scripts/commonjs.js",
+      "scripts/main.js"
+    ],
     "persistent": false
   },
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"
