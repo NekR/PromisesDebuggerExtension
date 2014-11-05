@@ -271,6 +271,30 @@ body {
 	box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5) !important;
 }
 
+.pd-branches {
+	margin-bottom: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: inset 0px 0px 0px 1px rgba(0, 0, 0, 0.1) !important;
+	background: #FFF !important;
+}
+
+.pd-branches-title {
+	width: auto !important;
+	float: right !important;
+	color: rgba(0, 0, 0, 0.4) !important;
+}
+
+.pd-branch-item {
+	width: 40px;
+	text-align: center;
+}
+
+.pd-branch-item::before {
+	display: block !important;
+	left: auto !important;
+	right: 0px !important;
+}
+
 /*.pd-table-head .pd-table-cell-header:first-child {
 	border-radius: 5px 0px 0px 0px;
 }

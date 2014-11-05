@@ -373,7 +373,7 @@
         row: row,
         data: data,
         topLevel: topLevel,
-        chaining: [],
+        branches: [],
         _chaingLength: 0,
         get chaingLength() {
           return this._chaingLength;
@@ -388,6 +388,10 @@
             parentRecord.mostChaing = this;
           }
 
+          if (this.branches.length > 1) {
+            val = val + ' [' + this.branches.length + ']';
+          }
+
           this.row.chain.textContent = val;
         },
         _mostChaing: null,
@@ -395,7 +399,7 @@
           this._mostChaing = val;
         },
         get mostChaing() {
-          return this._mostChaing || this.chaining[0] || null;
+          return this._mostChaing || this.branches[0] || null;
         }
       };
 
@@ -403,10 +407,13 @@
         var parentRecord = promiseRecord.parent = promises[data.parentPromise];
 
         if (parentRecord) {
-          parentRecord.chaining.push(promiseRecord);
+          parentRecord.branches.push(promiseRecord);
 
           if (!parentRecord.chaingLength) {
             parentRecord.chaingLength = 1;
+          } else if (parentRecord.branches.length > 1) {
+            parentRecord.row.chain.textContent = parentRecord.chaingLength +
+              ' [' + parentRecord.branches.length + ']';
           }
         }
       }
@@ -421,45 +428,62 @@
         e.preventDefault();
         e.stopPropagation();
 
-        var chainRecursion = function(record, index) {
-          var arr = [
-            '<div style="margin-left: ' + index * 10 + 'px;" class="pd-promise-chain">'
-          ];
-
-          record.chaining.forEach(function(promiseRecord) {
-            arr.push('<div>')
-              arr.push('<div class="pd-promise-chain-item">Promise[' + promiseRecord.id + '], Chain[' + promiseRecord.chaingLength + '], ' + (promiseRecord.state ? 'State[' + promiseRecord.state + ']' : '') + '</div>');
-              arr.push(chainRecursion(promiseRecord, index + 1));
-            arr.push('</div>');
-          });
-
-          arr.push('</div>');
-
-          return arr.join('');
-        };
-
-        // var chain = chainRecursion(promiseRecord, 0);
-
         chainCont.innerHTML = '';
 
-        // if (chainCont.hidden) {
-          // chainCont.innerHTML = '<div class="ui segment">' + chain + '</div>';
+        var wrap = document.createElement('div');
 
-          var wrap = document.createElement('div');
+        wrap.className = 'ui segment';
 
-          wrap.className = 'ui segment';
-          // wrap.textContent = 'test';
+        var branches = document.createElement('div');
+        branches.className = 'ui menu pd-branches';
 
-          var useRecord = promiseRecord;
+        var branchesTitle = document.createElement('a');
+        branchesTitle.className = 'item pd-branch-item pd-branches-title disabled';
+        branchesTitle.textContent = 'Branches';
 
-          while (useRecord = useRecord.mostChaing) {
-            wrap.appendChild(useRecord.row.item);
+        branches.appendChild(branchesTitle);
+
+        var lastActiveItem;
+
+        promiseRecord.branches.forEach(function(promise, i) {
+          var item = document.createElement('a');
+          item.className = 'item pd-branch-item' +
+            (promise === promiseRecord.mostChaing ? ' active' : '');
+          item.textContent = (promise.chaingLength | 0) + 1;
+          branches.appendChild(item);
+
+          if (promise === promiseRecord.mostChaing) {
+            lastActiveItem = item;
           }
 
-          chainCont.appendChild(wrap);
-        // }
+          item.addEventListener('click', function() {
+            if (item.classList.contains('active')) return;
 
-        // chainCont.hidden = !chainCont.hidden;
+            lastActiveItem.classList.remove('active');
+            lastActiveItem = item;
+            item.classList.add('active');
+
+            drawBranch(promise);
+          });
+        });
+
+        wrap.appendChild(branches);
+
+        var branchTarget = document.createElement('div');
+        wrap.appendChild(branchTarget);
+
+        var drawBranch = function(useRecord) {
+          branchTarget.innerHTML = '';
+
+          do {
+            branchTarget.appendChild(useRecord.row.item);
+          } while (useRecord = useRecord.mostChaing);
+        };
+
+        drawBranch(promiseRecord.mostChaing);
+
+        chainCont.appendChild(wrap);
+
         toggleExtendBlock(row.extend, chainCont);
       });
 

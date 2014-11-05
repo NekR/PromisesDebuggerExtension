@@ -21,8 +21,10 @@
       name: path
     };
 
+    response = '"use strict";\n\n' + response;
+
     var fn = new Function('module', 'exports', response);
-    fn(module, module.exports);
+    fn.call(global, module, module.exports);
 
     return module;
   };
@@ -54,6 +56,9 @@
     if (!module) return null;
 
     console.log('[require]:', path);
+
+    // same as firefox sdk does
+    Object.freeze(module.exports);
     modules.set(path, module);
 
     return module.exports;

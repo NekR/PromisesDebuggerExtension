@@ -3,7 +3,14 @@ var panel,
   panelPending = [],
   watchListenersRegistered;
 
-chrome.devtools.panels.create('Promises', '', 'shared/promises-panel.html', function(promisesPanel) {
+chrome.devtools.panels.sources.createSidebarPane("My Sidebar",
+    function(sidebar) {
+      console.log(sidebar);
+        // sidebar initialization code here
+        sidebar.setObject({ some_data: "Some data to show" });
+});
+
+chrome.devtools.panels.create('Promises', 'shared/images/promises.png', 'shared/promises-panel.html', function(promisesPanel) {
   panel = promisesPanel;
 
   panel.onShown.addListener(function waitShow(win) {

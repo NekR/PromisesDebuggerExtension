@@ -12,6 +12,7 @@ const { setTimeout, clearTimeout } = require('sdk/timers');
 const { TargetLogger } = require('lib/target-logger.js');
 const prefs = new (require('shared/prefs.js').Prefs);
 const backend = require('shared/backend.js');
+const ext = require('shared/ext.js');
 
 prefs.ready.then(function() {
   console.log(prefs.getAll());
@@ -316,7 +317,7 @@ gDevTools.registerTool({
   url: self.data.url('shared/promises-panel.html'),
   label: 'Promises',
   tooltip: 'Promises Debugger',
-  icon: self.data.url("icon-16.png"),
+  icon: ext.getURL('data/shared/images/promises.png'),
   isTargetSupported: target => target.isLocalTab,
   build: (window, toolbox) => {
     /*toolbox.on('destroy', function() {

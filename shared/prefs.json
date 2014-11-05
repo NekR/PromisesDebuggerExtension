@@ -9,5 +9,8 @@
 
 	"log_caught_rejections": true,
 	// pause on errors in promise which has at least one catch handler
-	"pause_on_caught_errors": false
+	"pause_on_caught_errors": false,
+
+	// attach backend to target on DevTools open
+	"start_watch_on_start": false
 }
