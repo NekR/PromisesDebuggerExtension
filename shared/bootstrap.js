@@ -22,9 +22,11 @@ modules.load({
 
     // local modules
 
-    // jsx templates first
-    'fw/modules/jsx.js',
-    'fw/modules/jsx-parser.js',
+    // jsx modules
+    'fw/cui/modules/jsx/jsx.js',
+    'fw/cui/modules/jsx/jsx-parser.js',
+
+    // jsx templates bundle
     'jsx_dist/jsx_dist.js',
 
     // next components

@@ -1,0 +1,3 @@
+[submodule "node_modules/jsx-templates"]
+	path = node_modules/jsx-templates
+	url = https://github.com/NekR/jsx-templates.git

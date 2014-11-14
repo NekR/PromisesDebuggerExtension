@@ -1,4 +1,4 @@
-var jsx = require('G:\\jsx-templates');
+var jsx = require('jsx-templates');
 var fs = require('fs');
 var path = require('path');
 
