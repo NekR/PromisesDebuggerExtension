@@ -1,0 +1,31 @@
+<!doctype html>
+
+<script src="../loader.js"></script>
+
+<script>
+	modules.ready(function() {
+		modules.require('parser').parse(document.body);
+	});
+
+	modules.load({
+		version: 1,
+		deps: [
+			'../lib/sync.js',
+
+			'../modules/lib.js',
+			'../modules/events.js',
+			'../modules/utils.js',
+			'../modules/ui.js',
+			'../modules/types.js',
+			'../modules/parser.js',
+			'../modules/dom-parser.js',
+			'../modules/class-map.js'
+		],
+		url: '../modules.js',
+		path: './',
+		debug: false,
+		packaged: false,
+		webapp: false,
+		cache: false
+	});
+</script>

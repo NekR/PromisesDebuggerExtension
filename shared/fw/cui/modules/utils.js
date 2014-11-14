@@ -282,6 +282,17 @@ var exports = {
     /*} else {
       go();
     }*/
+  },
+  touchDOM: function(callback) {
+    return new Promise(function(resolve) {
+      requestAnimationFrame(function() {
+        callback();
+
+        setTimeout(function() {
+          resolve();
+        }, 1);
+      });
+    });
   }
 };
 

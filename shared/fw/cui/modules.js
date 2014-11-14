@@ -308,10 +308,27 @@
 
       end();
     },
-    handleModule: function(name, obj) {
-      list[name] = obj;
-      obj.exports.__moduleName__ = name;
-      return obj;
+    handleModule: function(name, module) {
+      list[name] = module;
+
+      var exports = module.exports;
+
+      if (exports &&
+        typeof exports === 'object' ||
+        typeof exports === 'function'
+      ) {
+        Object.defineProperty &&
+        Object.defineProperty(exports, '__moduleName__', {
+          writable: false,
+          configurable: false,
+          enumerable: false,
+          value: name
+        });
+      }
+
+      // Object.freeze && Object.freeze(exports);
+
+      return module;
     },
     require: function(name) {
       if (typeof name !== 'string') throw new TypeError('Bad argument');
@@ -339,10 +356,6 @@
               return exports;
             },
             set: function(val) {
-              if (!isObj(val)) {
-                return;
-              }
-
               exports = val;
             }
           }
@@ -350,7 +363,7 @@
       }),
       exports = module.exports;
 
-      modules.push();
+      modules.push(module);
 
       var result = fn.call(
         window,
@@ -360,14 +373,13 @@
         exports
       );
 
-      // debugger;
-
-      if (result && result !== exports &&
-          module.exports === exports && isObj(result)) {
+      if (module.exports === exports &&
+        typeof result !== 'undefined' && result !== exports
+      ) {
         module.exports = result;
       }
 
-      exports = result = null;
+      exports = null;
 
       modules.handleModule(name, module);
       modules.pop();
@@ -471,8 +483,12 @@
         errback
       );
     },
-    push: function() {},
-    pop: function() {},
+    push: function(mod) {
+      this.stack.push(mod);
+    },
+    pop: function() {
+      this.stack.pop();
+    },
     clearCache: function() {
       localStorage.removeItem(modules.LOADER_MODULES);
       localStorage.removeItem(modules.LOADER_VERSION);
@@ -504,11 +520,19 @@
       return code;
     },
 
+    stack: [],
     globalsUsed: {},
     globalRequire: {},
     loadedModules: null,
     STORAGE_CODE_KEY: '_storage_modules_code_',
-    STORAGE_VERSION_KEY: '_storage_modules_version_'
+    STORAGE_VERSION_KEY: '_storage_modules_version_',
+
+    get current() {
+      var stack = this.stack,
+        length = stack.length;
+
+      return length ? stack[length - 1] : null;
+    }
   };
 
   for (var prop in extend) {

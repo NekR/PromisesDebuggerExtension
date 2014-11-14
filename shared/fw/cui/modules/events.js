@@ -9,7 +9,7 @@ var EVENTS_TARGET_KEY = 'events_node_target',
   EVENTS_NAMESPACE = 'mod_events',
   EVENTS_CACHE_KEY = 'events_center',
   EVENT_TARGET_TAG = 'event-target',
-  EVENTS_SC_GROUP_HANDLERS = 'events_sc_group_handlers';
+  EVENTS_REGISTER_HANDLERS = 'events_register_handlers';
 
 var EventsCenter = function(node, options) {
   if (!node) return null;
@@ -105,17 +105,33 @@ EventsCenter.prototype = {
     if (center) {
       center.node = null;
     }
+  },
+  add: function(node, event, options) {
+    if (!event) {
+      throw new Error('No event');
+    }
+
+    var cache = lib.cache(node),
+      handlers = cache[EVENTS_REGISTER_HANDLERS],
+      handler = handlers && hasOwn.call(handlers, event) && handlers[event];
+
+    if (handler && !handler.called) {
+      handler.called = true;
+      handler.fn.call(node, event);
+    }
+
+    libEvents.add(node, event, options);
   }
 };
 
 lib.each({
-  action: function(event, callback, useCaptures) {
+  action: function(event, callback, useCapture) {
     var eventForward = this.eventForward,
       eventLast = this.eventLast,
       node = this.node,
       self = this;
 
-    libEvents.add(node, event, {
+    this.add(node, event, {
       handler: function(e) {
         var args = e.detail || [],
           actionsDesc = args.length ? args[0] : null,
@@ -182,7 +198,7 @@ lib.each({
       throw new Error('Attempt to listen undefined event');
     }
 
-    libEvents.add(node, event, {
+    this.add(node, event, {
       handler: function(e) {
         var args = e.detail || [];
 
@@ -285,7 +301,7 @@ lib.each({
     var eventForward = this.eventForward,
       node = this.node;
 
-    libEvents.add(node, event, {
+    this.add(node, event, {
       handler: function(e) {
         var target = e.target;
 
@@ -328,6 +344,24 @@ lib.each({
         self.remove(event, exprHandler);
       }
     });
+  },
+  register: function(event, fn) {
+    var node = this.node,
+      self = this;
+
+    var cache = lib.cache(node),
+      handlers = cache[EVENTS_REGISTER_HANDLERS];
+
+    if (!handlers) {
+      handlers = cache[EVENTS_REGISTER_HANDLERS] = {};
+    }
+
+    if (hasOwn.call(handlers, event)) return;
+
+    handlers[event] = {
+      fn: fn,
+      called: false
+    };
   }
 }, function(method, name) {
   EventsCenter.addMethod(name, method);
@@ -349,12 +383,19 @@ events.getMap = function(mod, list) {
   }, {})
 };
 
+events.map = function(list) {
+  var current = modules.current,
+    name = current ? current.name : 'mod' + Date.now();
+
+  return events.getMap(name, list);
+};
+
 events.wrap = function(node, options) {
   return EventsCenter.init(node, options);
 };
 
 var exports = events;
 
-if (modules && modules.globalRequire) {
+if (typeof modules !== 'undefined' && modules.globalRequire) {
   modules.globalRequire[module.name] = module.name;
 }

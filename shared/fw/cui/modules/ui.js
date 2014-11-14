@@ -2,26 +2,29 @@ var utils = require('utils'),
   lib = require('lib');
 
 var exports = {
-  events: events.getMap(module.name, [
+  events: events.map([
+    'propChange',
     'childControl',
     'changeState',
     'idControl',
-    'change',
-    'select',
-    'disabled',
-    'enabled',
     'destroy',
-    'load',
-    'error',
-    'open',
-    'close',
     'show',
     'hide',
     'remove',
     'attach',
     'detach',
-    'activate',
     'resize',
+    
+    /* not used */
+    'change',
+    'select',
+    'disabled',
+    'enabled',
+    'load',
+    'error',
+    'open',
+    'close',
+    'activate',
   ]),
   mixins: {},
   controls: {},
@@ -199,6 +202,7 @@ var exports = {
     var control = uiCache(viewOrBase, UI_CONTROL_CACHE_KEY, control);
     return control;
   },
+
   DEFAULT_TYPE: '',
   DEFAULT_PROP: ''
 };
@@ -336,10 +340,17 @@ accessors = function(control, accessor, args) {
     } else {
       tmp = tmp[DEFAULT_PROP];
     }
+
+    type = tmp.type;
   }
 
-  // args.unshift(control);
-  return tmp[accessor].apply(tmp, [control].concat(args));
+  var result = tmp[accessor].apply(tmp, [control].concat(args));;
+
+  if (accessor === 'set') {
+    control.notifyChange(type, name);
+  }
+
+  return result;
 },
 handleProperties = function(properties) {
   return Object.keys(properties).reduce(function(result, key) {
@@ -489,7 +500,6 @@ controls.element = utils.inherits({
         this.set('id', generateUID());
       }
 
-
       events.on(view, exports.events.childControl, function(e, child, index) {
         var name = child.get('name');
 
@@ -535,6 +545,17 @@ controls.element = utils.inherits({
       debug('warning: wrong control tree position', view);
       // throw new Error();
     }
+
+    events.register(this, exports.events.propChange, function() {
+      console.log('propChange registered');
+      self.notifyChange = function(type, name) {
+        console.log('notifyChange2');
+        events.fire(self, exports.events.propChange, {
+          type: type,
+          name: name
+        });
+      };
+    });
   }
 });
 
@@ -592,12 +613,52 @@ controls.element.prototype = {
       fn.call(self);
     }, delay || 1);
   },
+  touch: function(callback) {
+    var self = this;
+    var doCancel;
+    var removeHandler = function() {
+      if (doCancel) doCancel();
+    };
+
+    events.on(self.view, exports.events.destroy, removeHandler);
+
+    var promise = new Promise(function(resolve, reject) {
+      var frame = requestAnimationFrame(function() {
+        if (self.zombie) {
+          reject(new Error('Cannot touch zombie'));
+          return;
+        }
+
+        callback();
+
+        var timer = setTimeout(function() {
+          doCancel = null;
+
+          if (self.zombie) {
+            console.warn('Race between control touch and zombie, exit');
+            return;
+          }
+
+          events.remove(self.view, exports.events.destroy, removeHandler);
+          resolve();
+        }, 1);
+
+        doCancel = function() {
+          clearTimeout(timer);
+        };
+      });
+
+      doCancel = function() {
+        cancelRequestAnimation(frame);
+      };
+    });
+
+    return promise;
+  },
   frame: function(fn) {
     var frame = {
       fn: fn
     };
-
-    
   },
   remove: function() {
     this.destroy({
@@ -619,7 +680,9 @@ controls.element.prototype = {
     }
 
     destroy.call(this, options);
-  }
+  },
+
+  notifyChange: function(/* type, name */) {console.log('notifyChange');}
 };
 
 [
