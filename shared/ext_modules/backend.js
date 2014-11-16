@@ -18,8 +18,7 @@ exports.getCode = function() {
       code + '}(PromisesDebugger, this));';
   });
 
-  debugBackendCode = debugBackendCode + debugProvidersCode;
-  backendCode = ';var backendCode = ' + JSON.stringify(debugBackendCode) + ';';
+  backendCode = debugBackendCode + debugProvidersCode;
 
   return backendCode;
 };

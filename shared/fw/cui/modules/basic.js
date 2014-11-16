@@ -1,11 +1,10 @@
-var ui = require('ui'),
-  parser = require('parser'),
-  utils = require('utils'),
-  touch = require('touch'),
-  uiStates = ui.states;
+var ui = require('ui');
+var parser = require('parser');
+var utils = require('utils');
+var uiStates = ui.states;
 
 var exports = {
-  events: events.getMap(module.name, [
+  events: events.map([
     'deactiveControl'
   ])
 };
@@ -39,74 +38,69 @@ var statesMap = {
   disabled: {
     blocks: ['none', 'hover', 'active', 'focus', 'selected', 'loading', 'error', 'readonly']
   }
-},
-originalStateSet = parser.OriginalElement.properties.state.set;
+};
+
+var originalStateSet = parser.OriginalElement.properties.state.set;
 
 ui.define('live-element', {
-  mixins: ['touch-element'],
   handler: function() {
-    var startValue,
-      self = this,
-      view = this.view,
-      node = this.node,
-      beforeActive = ui.states.none,
-      deactiveConst = 'mouseup mousedown',
-      docDeactiveConst = deactiveConst,
-      activeConst = 'mousedown';
+    var self = this;
+    var view = this.view;
+    var node = this.node;
 
-    if (utils.hasTouch) {
-      activeConst = 'touchstart';
-      deactiveConst = 'touchend touchcancel touchleave';
-      docDeactiveConst = 'touchend touchcancel';
-    }
+    var beforeActivate = uiStates.none;
+
+    var ACTIVATE_EVENT = 'mousedown';
+    var DEACTIVATE_EVENT = 'mouseup mousedown';
+    var DOC_DEACTIVATE_EVENT = DEACTIVATE_EVENT;
 
     var deactiveHandler = function(e) {
       if (!self) return;
 
-      if (self.get('state') === ui.states.active) {console.log('deactive', e.type, e.currentTarget.nodeName);
+      if (self.get('state') === uiStates.active) {
         if (e.currentTarget === document || e.target === view || view.contains(e.target)) {
-          if (!utils.hasTouch) {
-            self.set('state', ui.states.none, {
-              silent: false,
-              direct: false
+          self.set('state', uiStates.none, {
+            silent: false,
+            direct: false
+          });
+
+          if (beforeActivate !== ui.state.none) {
+            self.set('state', beforeActivate, {
+              direct: true
             });
           }
-
-          self.set('state', beforeActive, {
+        } else if (beforeActivate === uiStates.hover) {
+          self.set('state', uiStates.none, {
             direct: true
           });
-        } else if (beforeActive === ui.states.hover) {
-          self.set('state', ui.states.none, {
-            direct: true
-          });
-        }
-
-        console.log(self.get('state'), self.view.getAttribute('data-state'));
-        if (self.get('state') !== self.view.getAttribute('data-state')) {
-          debugger;
         }
       }
 
-      events.remove(view, deactiveConst + ' ' + ui.events.destroy, deactiveHandler);
-      events.remove(document, docDeactiveConst, deactiveHandler);
-    },
-    activeHandler = function(e) {
+      events.remove(view, [DEACTIVATE_EVENT, ui.events.destroy], deactiveHandler);
+      events.remove(document, DOC_DEACTIVATE_EVENT, deactiveHandler);
+    };
+
+    var activeHandler = function(e) {
+      if (!self) return;
+
       var state = self.get('state');
 
-      if (state !== ui.states.none && state !== ui.states.hover) return;
+      if (state !== uiStates.none && state !== uiStates.hover) return;
 
-      console.log('activate');
+      beforeActivate = state;
 
-      beforeActive = state;
-      self.set('state', ui.states.active, {
+      self.set('state', uiStates.active, {
         direct: true
       });
 
-      events.once(document, 'mousedown', function() {
-        events.on(document, docDeactiveConst, deactiveHandler);
-      });
-      events.on(view,
-        deactiveConst + ' ' + ui.events.destroy, deactiveHandler);
+      events.once(document, ACTIVATE_EVENT, docActivateHandler);
+      events.on(view, [DEACTIVATE_EVENT, ui.events.destroy], deactiveHandler);
+    };
+
+    var docActivateHandler = function() {
+      if (!self || self.zombie) return;
+
+      events.on(document, DOC_DEACTIVATE_EVENT, deactiveHandler);
     };
 
     events.on(self, ui.events.destroy, function() {
@@ -116,12 +110,12 @@ ui.define('live-element', {
     events.on(view, 'mouseenter mouseleave', function(e) {
       var state = self.get('state');
 
-      if (state !== ui.states.none && state !== ui.states.hover) return;
+      if (state !== uiStates.none && state !== uiStates.hover) return;
 
       if (e.type === 'mouseenter') {
-        state = ui.states.hover;
+        state = uiStates.hover;
       } else {
-        state = ui.states.none;
+        state = uiStates.none;
       }
 
       self.set('state', state, {
@@ -129,29 +123,15 @@ ui.define('live-element', {
       });
     });
 
-    events.on(view, activeConst, activeHandler);
+    events.on(view, ACTIVATE_EVENT, activeHandler);
     events.on(view, exports.events.deactiveControl, deactiveHandler);
 
     events.on(self, ui.events.changeState, function(e, data) {
-      if (data.state === ui.states.disabled) {
-        events.fire(self, ui.events.disabled);
-      } else if (data.state === ui.states.none && self.get('disabled')) {
-        events.fire(self, ui.events.enabled);
+      if (data.state === uiStates.disabled && !self.get('disabled')) {
+        self.set('disabled', true);
+      } else if (data.state === uiStates.none && self.get('disabled')) {
+        self.set('disabled', false);
       }
-    });
-
-    events.on(self, ui.events.disabled, function() {
-      utils.makeUnselectable(node, {
-        preventTab: true
-      });
-
-      self.set('disabled', true);
-      node.blur();
-    });
-
-    events.on(self, ui.events.enabled, function() {
-      utils.restoreSelectable(node);
-      self.set('disabled', false);
     });
   },
   properties: {
@@ -166,7 +146,7 @@ ui.define('live-element', {
         var current = control.get(name),
           currentMap = statesMap[current],
           newMap = statesMap[state];
-        
+
         if (state === current) {
           return state;
         }
@@ -197,199 +177,84 @@ ui.define('live-element', {
     disabled: {
       type: 'boolean',
       set: function(control, name, value) {
+        var node = control.node;
+
+        if (value) {
+          node.blur();
+          utils.makeUnselectable(node, {
+            preventTab: true
+          });
+        } else {
+          utils.restoreSelectable(node);
+        }
+
         control.set('boolean:' + name, value);
-        control.node.disabled = value;
+        node.disabled = value;
       }
     }
   }
 });
 
 ui.define('focusable', {
+  parent: 'live-element',
   handler: function() {
-    var self = this,
-      node = this.node;
+    var self = this;
+    var node = this.node;
 
     var getValue = function(control) {
       return control.get('value');
-    },
-    listenInput = function() {
+    };
+
+    var listenInput = function() {
       if (getValue(self) !== startValue) {
-        self.set('state', ui.states.none, {
+        self.set('state', uiStates.none, {
           silent: false,
           direct: false
         });
 
-        self.set('state', ui.states.focus);
-
+        self.set('state', uiStates.focus);
         events.remove(self, ui.events.change, listenInput);
       }
     };
 
+    var startValue = getValue(self);
+
     events.on(node, 'focus blur', function(e) {
       var state = self.get('state');
 
-      if (state === ui.states.error/* ||
-          state === ui.states.loading ||
-          state === ui.states.disabled*/) return;
+      if (state === uiStates.error ||
+          state === uiStates.loading ||
+          state === uiStates.disabled) return;
 
-      self.set('state', e.type === 'focus' ? ui.states.focus : ui.states.none, {
-        direct: true
-      });
-    });
-
-    events.on(self, ui.events.changeState, function(e, data) {
-      if (data.state !== ui.states.error) return;
-
-      events.on(node, 'focus', function() {
-       startValue = getValue(self);
-       events.on(self, ui.events.change, listenInput);
-      });
-    });
-  }
-});
-
-/*ui.define('live-element', {
-  mixins: ['touch-element'],
-  handler: function() {
-    var startValue,
-      self = this,
-      view = this.view,
-      node = this.node,
-      beforeActive = ui.states.none,
-      deactiveConst = 'mouseup mousedown',
-      docDeactiveConst = deactiveConst,
-      activeConst = 'mousedown';
-
-    if (utils.hasTouch) {
-      activeConst = 'touchstart';
-      deactiveConst = 'touchend touchcancel touchleave';
-      docDeactiveConst = 'touchend touchcancel';
-    }
-
-    var deactiveHandler = function(e) {
-      if (!self) return;
-
-      if (self.get('state') === ui.states.active) {console.log('deactive', e.type, e.currentTarget.nodeName);
-        if (e.currentTarget === document || e.target === view || view.contains(e.target)) {
-          if (!utils.hasTouch) {
-            self.set('state', ui.states.none, {
-              silent: false,
-              direct: false
-            });
-          }
-
-          self.set('state', beforeActive, {
-            direct: true
-          });
-        } else if (beforeActive === ui.states.hover) {
-          self.set('state', ui.states.none, {
-            direct: true
-          });
-        }
-
-        console.log(self.get('state'), self.view.getAttribute('data-state'));
-        if (self.get('state') !== self.view.getAttribute('data-state')) {
-          debugger;
-        }
-      }
-
-      events.remove(view, deactiveConst + ' ' + ui.events.destroy, deactiveHandler);
-      events.remove(document, docDeactiveConst, deactiveHandler);
-    },
-    activeHandler = function(e) {
-      var state = self.get('state');
-
-      if (state !== ui.states.none && state !== ui.states.hover) return;
-
-      console.log('activate');
-
-      beforeActive = state;
-      self.set('state', ui.states.active, {
-        direct: true
-      });
-
-      events.once(document, 'mousedown', function() {
-        events.on(document, docDeactiveConst, deactiveHandler);
-      });
-      events.on(view,
-        deactiveConst + ' ' + ui.events.destroy, deactiveHandler);
-    };
-
-    events.on(self, ui.events.destroy, function() {
-      self = view = node = null;
-    });
-
-    events.on(view, 'mouseenter mouseleave', function(e) {
-      var state = self.get('state');
-
-      if (state !== ui.states.none && state !== ui.states.hover) return;
-
-      if (e.type === 'mouseenter') {
-        state = ui.states.hover;
-      } else {
-        state = ui.states.none;
-      }
+      state = e.type === 'focus' ? uiStates.focus : uiStates.none;
 
       self.set('state', state, {
         direct: true
       });
     });
 
-    events.on(view, activeConst, activeHandler);
-    events.on(view, exports.events.deactiveControl, deactiveHandler);
-
     events.on(self, ui.events.changeState, function(e, data) {
-      if (data.state === ui.states.disabled) {
-        events.fire(self, ui.events.disabled);
-      } else if (data.state === ui.states.none && self.get('disabled')) {
-        events.fire(self, ui.events.enabled);
-      }
+      if (data.state !== uiStates.error) return;
+
+      events.on(node, 'focus', function() {
+        startValue = getValue(self);
+        events.on(self, ui.events.change, listenInput);
+      });
     });
+
+    if (!node.hasAttribute('tabindex')) {
+      self.set('tabIndex', 0);
+    }
   },
   properties: {
-    state: {
-      type: 'string',
-      set: function(control, name, state, params) {
-        if (params) {
-          var direct = params.direct,
-            silent = params.silent;
-        }
-
-        var current = control.get(name),
-          currentMap = statesMap[current],
-          newMap = statesMap[state];
-        
-        if (state === current) {
-          return state;
-        }
-
-        if (direct) {
-          var iter = function(state) {
-            return uiStates[state] === current;
-          };
-
-          if (
-            (currentMap && (currentMap = currentMap.blocks) && currentMap.some(iter)) ||
-            (newMap && (newMap = newMap.from) && !newMap.some(iter))
-          ) {
-            return;
-          }
-        }
-
-        // console.log('state: ', state === '' ? '(empty)' : state);
-
-        originalStateSet.call(this, control, name, state, {
-          state: state,
-          direct: direct,
-          silent: silent
-        });
-
-        // control.set(this.type + ':' + name, state);
+    tabIndex: {
+      type: 'default',
+      get: function(control) {
+        return control.node.tabIndex;
+      },
+      set: function(control, name, value) {
+        control.node.tabIndex = value;
       }
     }
   }
-});*/
-
-/*utils.boxWidth(node, {
-  inner: true
-});*/
+});

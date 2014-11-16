@@ -9,14 +9,12 @@ var controls = ui.controls,
   uiCache = ui.cache,
   hasOwn = Object.prototype.hasOwnProperty;
 
-var ATTR_PREFIX = 'data-';
-
 var defaultProp = ui.type.get(controls.element.properties[ui.DEFAULT_PROP]);
 var defaultType = ui.type.get(ui.DEFAULT_TYPE);
 
 exports.defaultProp = defaultProp;
 exports.defaultType = defaultType;
-exports.ATTR_PREFIX = ATTR_PREFIX;
+exports.DATA_NAMESPACE = 'ui';
 
 var typedCache = exports.typedCache = function(type, control, name, value) {
   var data = uiCache(control.view);
@@ -33,7 +31,7 @@ var typedCache = exports.typedCache = function(type, control, name, value) {
 };
 
 var attrData = function(node, attr, value) {
-  attr = ATTR_PREFIX + camel2css(attr);
+  attr = exports.DATA_NAMESPACE + '-' + camel2css(attr);
   return utilsAttr(node, attr, value);
 };
 
@@ -256,18 +254,32 @@ ui.type.define('target', {
 
     return new Promise(function(resolve, reject) {
       if (!target) {
-        reject();
+        reject(new Error('Target not found, [' + target + ']'));
         return;
       }
 
       target = target.split(':');
 
+      // Currently supported:
+      // #target -- id
+      // target -- id
+      // :key:args -- modificator via |key|, one of supported,
+      //           possibly even id
+      // Not supported:
+      // #target.child.child:offset
+
       if (!target[0]) {
         fn = target[1];
         args = target.slice(2);
       } else {
+        target = target[0];
+
+        if (target[0] === '#') {
+          target = target.slice(1);
+        }
+
         fn = 'id';
-        args = [target[0]];
+        args = [target];
       }
 
       if (hasOwn.call(targetFunctions, fn)) {
@@ -280,11 +292,16 @@ ui.type.define('target', {
           args: args
         });
       } else {
-        reject();
+        reject(new Error('Target function not found, [' + fn + ']'));
       }
     });
   },
   set: function(control, name, target) {
+    if (!control.get('parsed')) {
+      control.set('string:' + name, target);
+      return;
+    }
+
     if (ui.is(target, 'element')) {
       target = target.get('id');
     } else if (typeof target !== 'string' || !hasOwn.call(elements, target)) {

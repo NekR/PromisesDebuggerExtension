@@ -13,7 +13,7 @@ var getControlNode = parser.getControlNode,
 
 parser.registered.push(exports);
 
-exports.CONTROLS_ATTR = types.ATTR_PREFIX + 'control';
+exports.CONTROLS_ATTR = parser.DATA_NAMESPACE + '-control';
 exports.CONTROLS_SELECTOR = '[' + exports.CONTROLS_ATTR + ']';
 
 var currentNodes = [];
@@ -206,10 +206,11 @@ var createNodeTree = function(root, list, parent) {
 var parseTree = function(node, params) {
   init: if (!uiControl(element = node.element)) {
     params || (params = {});
+
     parent = params.parent;
 
-    // disabled for now
-    if (false && !parent) {
+    // parent is TreeNode.parent
+    if (!parent) {
       parent = node.parent && node.parent.element;
       parent = parent && uiControl(parent);
     }
@@ -335,7 +336,9 @@ var parseTree = function(node, params) {
 };
 
 var debugElementTree = function(element, level) {
-  console.log(new Array(level).join('|--') + element.getAttribute('data-control') +
-              (element.getAttribute('data-name') ? '["' + element.getAttribute('data-name') + '"]' : '') +
-              (element.getAttribute('data-id') || element.id ? '#' + (element.getAttribute('data-id') || element.id) : ''));
+  var ns = parser.DATA_NAMESPACE;
+
+  console.log(new Array(level).join('|--') + element.getAttribute(ns + '-control') +
+              (element.getAttribute(ns + '-name') ? '["' + element.getAttribute(ns + '-name') + '"]' : '') +
+              (element.getAttribute(ns + '-id') || element.id ? '#' + (element.getAttribute(ns + '-id') || element.id) : ''));
 };

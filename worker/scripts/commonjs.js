@@ -1,8 +1,8 @@
 (function(global) {
   var modules = new Map();
 
-  var LIB_URL = chrome.runtime.getURL('/scripts/');
-  var SHARED_URL = chrome.runtime.getURL('/shared/ext_modules/');
+  var LIB_URL = env.getURL('/scripts/');
+  var SHARED_URL = env.getURL('/shared/ext_modules/');
 
   var loadModule = function(path) {
     var xhr = new XMLHttpRequest();
@@ -29,17 +29,17 @@
     return module;
   };
 
-  var require = global.require = function(path) {
+  var require = env.require = function(path) {
     path = path.replace(/(?:\.js)?$/i, '.js');
 
-    if (!path.indexOf('chrome-extension://')) {
+    if (!path.indexOf(env.origin)) {
       // do nothing
     } else if (!path.indexOf('shared/')) {
       path = SHARED_URL + path.replace('shared/', '');
     } else if (!path.indexOf('lib/')) {
       path = LIB_URL + path.replace('lib/', '');
     } else if (path[0] === '.' || path[0] === '/') {
-      path = chrome.runtime.getURL(path);
+      path = env.getURL(path);
     } else {
       // relative
       path = LIB_URL + path;

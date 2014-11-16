@@ -47,6 +47,18 @@ module.exports = {
       });
     });
   },
+  clear: function() {
+    return new Promise(function(resolve, reject) {
+      chrome.storage.local.clear(function() {
+        if (lastError()) {
+          reject(lastError());
+          return;
+        }
+
+        resolve();
+      });
+    });
+  },
   getAll: function() {
     return new Promise(function(resolve, reject) {
       chrome.storage.get(null, function(items) {

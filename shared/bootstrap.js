@@ -18,6 +18,8 @@ modules.load({
     'fw/cui/modules/dom-parser.js',
     'fw/cui/modules/tpls.js',
     // cui controls
+    'fw/cui/modules/basic.js',
+    'fw/cui/modules/forms/forms.js',
     'fw/cui/modules/class-map.js',
 
     // local modules

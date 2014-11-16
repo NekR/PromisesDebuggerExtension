@@ -1,0 +1,71 @@
+<!doctype html>
+
+<div>
+	<script> document.write(navigator.userAgent); </script>
+</div>
+
+<a href="#" id="a"> link text </a><span class="hidden">Focus state!</span>
+<br>
+<button type="button" id="b"> button text </button><span class="hidden">Focus state!</span>
+<!--
+	# notes
+
+	* Chrome:
+		* link does not get focus onclick without tabindex/.focus()
+	* Opera:
+		* same as Chrome, but also does same for links on tab ring,
+			for example via Tab key
+	* Opera 11/12 (not Blink):
+		* link does not get focus on tab ring (e.g. Tab key)
+
+	* tabindex="0" helps to all
+	* .focus() helps only to click issues
+	* .tabIndex = 0; works same as attribute
+	* .tabIndex getter does nothing (e.i. need set to 0)
+
+ -->
+
+<style>
+	.hidden {
+		display: none;
+	}
+
+	#a:focus + .hidden,
+	#b:focus + .hidden {
+		display: inline-block;
+	}
+</style>
+
+<script>
+	var a = document.getElementById('a');
+	var b = document.getElementById('b');
+
+	a.tabIndex = 0;
+	b.tabIndex = 0;
+
+	a.addEventListener('mousedown', function(e) {
+		// a.focus();
+	});
+
+	b.addEventListener('mousedown', function() {
+		// b.focus();
+	});
+
+	[
+		'mousedown',
+		'mouseup',
+		'click',
+		'focus',
+		'blur',
+		'focusin',
+		'focusout'
+	].forEach(function(event) {
+		a.addEventListener(event, function() {
+			console.log(event, '[a]');
+		});
+
+		b.addEventListener(event, function() {
+			console.log(event, '[b]');
+		});
+	});
+</script>

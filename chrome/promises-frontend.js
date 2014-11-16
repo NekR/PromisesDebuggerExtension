@@ -67,7 +67,7 @@
     console.log('registerDevToolsListeners:', name);
 
     if (port) return;
-    
+
     port = chrome.runtime.connect({
       name: name
     });
@@ -122,7 +122,7 @@
 
   global.detachFromBackend = function() {
     if (port) {
-      port.disconnect(); 
+      port.disconnect();
     }
 
     onDisconnect();

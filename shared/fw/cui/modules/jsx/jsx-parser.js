@@ -10,15 +10,16 @@ var getControlNode = parser.getControlNode,
   type2class = utils.type2class,
   controls = ui.controls,
   uiControl = ui.control,
-  hasOwn = Object.prototype.hasOwnProperty;
+  hasOwn = Object.prototype.hasOwnProperty,
+  isArray = Array.isArray;
 
 parser.registered.push(exports);
 
-exports.CUI_NS = 'cui';
 exports.CONTROLS_KEY = 'control';
 
-var controlKey = exports.CUI_NS + ':' + exports.CONTROLS_KEY;
-var propsKey = exports.CUI_NS + ':' + 'props';
+var dataNamespace = parser.DATA_NAMESPACE;
+var controlKey = exports.CONTROLS_KEY;
+var propsKey = 'props';
 var currentNodes = [];
 
 var currentNode = function() {
@@ -121,15 +122,29 @@ var parseJSX = function(node, params) {
 
   var dom = jsx.toDOM(node, {
     onEnterElement: function(node, domElement, params) {
-
       var nodeProps = node.props;
+      var uiProps = nodeProps[dataNamespace];
 
-      if (!nodeProps[controlKey]) {
+      if (!uiProps || !uiProps[controlKey]) {
         return;
       }
 
-      var control = nodeProps[controlKey];
-      var props = nodeProps[propsKey];
+      var control = uiProps[controlKey];
+      var props = uiProps[propsKey];
+
+      if (
+        !props || isArray(props) ||
+        (props.valueOf && typeof props.valueOf() !== 'object')
+      ) {
+        props = {};
+      }
+
+      lib.each(uiProps, function(val, key) {
+        if (key === controlKey || key === propsKey) return;
+
+        props[key] = val;
+      });
+
       var send = {
         node: node,
         control: control,
@@ -201,17 +216,17 @@ var parseJSX = function(node, params) {
 };
 
 var parseControl = function(type, options, node) {
-  var control = parser.getControlClass(type);
-  var controlNode = control.class &&
-    parser.getControlNode(control.class, options.view);
-  
+  var controlClass = parser.getControlClass(type);
+  var controlNode = controlClass.class &&
+    parser.getControlNode(controlClass.class, options.view);
+
   if (!controlNode) {
-    return Promise.reject();
+    return Promise.reject(new Error('No control node'));
   }
 
   currentNodes.push(node);
 
-  var result = ui.create(control.type, options, controlNode);
+  var result = ui.create(controlClass.type, options, controlNode);
 
   currentNodes.pop();
 
@@ -228,6 +243,9 @@ var parseControl = function(type, options, node) {
   });
 
   return Promise.all(children).then(function() {
-    return control;
+    result.set('parsed', true);
+    events.fire(result.view, parser.events.parsed);
+
+    return result;
   });
 };

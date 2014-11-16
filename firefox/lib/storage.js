@@ -6,7 +6,7 @@ module.exports = {
       storage[key] = value;
       return Promise.resolve();
     } catch (e) {
-      return Promise.reejct(e);
+      return Promise.reject(e);
     }
   },
   get: function(key) {
@@ -14,7 +14,7 @@ module.exports = {
       var val = storage[key];
       return Promise.resolve(val);
     } catch (e) {
-      return Promise.reejct(e);
+      return Promise.reject(e);
     }
   },
   remove: function(key) {
@@ -22,7 +22,18 @@ module.exports = {
       delete storage[key];
       return Promise.resolve();
     } catch (e) {
-      return Promise.reejct();
+      return Promise.reject();
+    }
+  },
+  clear: function() {
+    try {
+      Object.keys(storage).forEach(function(key) {
+        delete storage[key];
+      });
+
+      return Promise.resolve();
+    } catch (e) {
+      return Promise.reject(e);
     }
   },
   getAll: function() {

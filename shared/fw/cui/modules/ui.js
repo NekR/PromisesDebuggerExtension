@@ -547,9 +547,7 @@ controls.element = utils.inherits({
     }
 
     events.register(this, exports.events.propChange, function() {
-      console.log('propChange registered');
       self.notifyChange = function(type, name) {
-        console.log('notifyChange2');
         events.fire(self, exports.events.propChange, {
           type: type,
           name: name
@@ -674,7 +672,7 @@ controls.element.prototype = {
     } else if (!options.remove) {
       events.fire(this.view, exports.events.destroyChildren, options);
     }
-    
+
     if (options.remove) {
       events.fire(this.view, exports.events.remove, options);
     }
@@ -682,7 +680,7 @@ controls.element.prototype = {
     destroy.call(this, options);
   },
 
-  notifyChange: function(/* type, name */) {console.log('notifyChange');}
+  notifyChange: function(/* type, name */) {}
 };
 
 [
@@ -692,7 +690,7 @@ controls.element.prototype = {
 ].forEach(function(key) {
   this[key] = function(event, fn, capture) {
     var view = this.view;
-    
+
     if (view) {
       return key === 'dispatchEvent' ?
         view[key].call(view, event) :

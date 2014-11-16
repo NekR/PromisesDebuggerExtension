@@ -44,13 +44,13 @@ body {
 	box-shadow: inset 0 0 5px 0px rgba(0, 0, 0, 0.3);
 }
 
-@-moz-document url-prefix() { 
+@-moz-document url-prefix() {
 	.attach-toggle {
 		box-shadow: inset 0 0 5px -1px rgba(0, 0, 0, 0.3);
 	}
 }
 
-.attach-toggle[selected] .attach-toggle-ball {
+.attach-toggle[ui-selected="true"] .attach-toggle-ball {
 	transform: translateX(0);
 	background-color: rgb(211, 89, 89);
 	box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.3);
@@ -169,7 +169,7 @@ body {
 	line-height: 1.40 !important;
 }
 
-[data-control="checkbox"][data-checked="true"] {
+[ui-control="checkbox"][ui-checked="true"] {
 	color: green;
 }
 

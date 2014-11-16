@@ -1,0 +1,51 @@
+<!doctype html>
+
+<style>
+	#panel, html, body {
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		border: none;
+		display: block;
+	}
+</style>
+
+<script>
+	var target = window.opener || window.parent;
+
+	var panelReady = function(iframe) {
+		var panelWindow = iframe.contentWindow;
+
+		window.addEventListener('message', function(e) {
+			var data = e.data;
+
+			if (data && e.source === target) {
+				console.log('TO PANEL:', data);
+
+				panelWindow.postMessage(data, '*');
+			}
+		});
+
+		panelWindow.addEventListener('message', function(e) {
+			var data = e.data;
+
+			if (data && e.source === panelWindow) {
+				console.log('FROM PANEL:', data);
+
+				target.postMessage({
+					PromisesWindow: true,
+					action: 'proxy',
+					data: data
+				}, '*');
+			}
+		});
+
+		target.postMessage({
+			PromisesWindow: true,
+			action: 'panel_ready'
+		}, '*');
+	};
+</script>
+
+<iframe id="panel" src="/worker/shared/promises-panel.html" onload="panelReady(this)"></iframe>

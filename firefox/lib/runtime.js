@@ -1,6 +1,6 @@
 const { Cc, Ci, Cu, Cr } = require("chrome");
 const self = require("sdk/self");
-  
+
 const { gDevTools } = Cu.import("resource:///modules/devtools/gDevTools.jsm", {});
 const { DevToolsUtils } = Cu.import("resource://gre/modules/devtools/DevToolsUtils.jsm", {});
 const devtools = Cu.import("resource://gre/modules/devtools/Loader.jsm", {}).devtools;
@@ -13,10 +13,6 @@ const { TargetLogger } = require('lib/target-logger.js');
 const prefs = new (require('shared/prefs.js').Prefs);
 const backend = require('shared/backend.js');
 const ext = require('shared/ext.js');
-
-prefs.ready.then(function() {
-  console.log(prefs.getAll());
-});
 
 console.log('Start');
 
@@ -184,7 +180,7 @@ PromisesPanel.prototype = {
         this.onReload()
       }
     });
-    
+
     webProgress.addProgressListener(
       this.progressListener,
       webProgress.NOTIFY_STATE_WINDOW | webProgress.NOTIFY_LOCATION

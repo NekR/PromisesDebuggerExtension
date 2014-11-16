@@ -177,7 +177,7 @@ var exports = {
       _classes = _classes && types.filter(function(type) {
         return hasOwn.call(controls, type);
       });
-      
+
       if (_classes && _classes.length) {
         type = /*types.join(CONTROL_TYPES_SEPARATOR);
         */_class = _classes.join(exports.CONTROL_TYPES_SEPARATOR);
@@ -201,7 +201,8 @@ var exports = {
   registered: [],
 
   MOUNT_POINT: 'parser:mountPoint',
-  CONTROL_TYPES_SEPARATOR: '_'
+  CONTROL_TYPES_SEPARATOR: '_',
+  DATA_NAMESPACE: types.DATA_NAMESPACE
 };
 
 var parseSingle = exports.parseSingle;
@@ -232,7 +233,7 @@ var properties = {
     set: function(control, name, value) {
       var id = control.get(name);
 
-      if (value === id) return;
+      if (value === id || !control.get('parsed')) return;
 
       if (id && hasOwn.call(elements, id)) {
         elements[id] = null;

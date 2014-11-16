@@ -3,9 +3,6 @@ var ext = require('shared/ext.js');
 var backend = require('shared/backend.js');
 var global = this;
 
-prefs.ready.then(function() {
-  console.log(prefs.getAll());
-});
 
 var inspections = new (global.Set || global.WeakSet),
   inspectionsMap = {},
@@ -115,7 +112,7 @@ chrome.runtime.onConnect.addListener(function(port) {
       code: ';(function() {}());',
       runAt: 'document_start'
     }, function() {
-      
+
     });
   },
   handleTabId = function(message, port) {
@@ -209,4 +206,5 @@ chrome.runtime.onConnect.addListener(function(port) {
 
 var debugFrontendCode = ext.loadSync('promises-frontend.js');
 var debugBackendCode = backend.getCode();
+debugBackendCode = ';var backendCode = ' + JSON.stringify(debugBackendCode) + ';';
 var injectCode = debugBackendCode + debugFrontendCode;

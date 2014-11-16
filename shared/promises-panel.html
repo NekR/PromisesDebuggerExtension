@@ -7,63 +7,28 @@
 		<link rel="stylesheet" href="ui/css/semantic.css">
 	</head>
 	<body>
-		<div id="main">
-			<div id="head">
-				<h4 class="ui top black attached header pd-main-header">
-					<div class="pd-header-icons">
-						<i class="setting icon link"
-							title="Settings"
-							id="settings-button"
-							role="button"
-						></i><i class="ban circle icon link"
-							title="Clear"
-							id="clear"
-							role="button"
-						></i>
-					</div>
-					Promises Debugger
-					<div class="attach-toggle"
-						role="button"
-						id="toggle-attach"
-					>
-						<div class="attach-toggle-ball"></div>
-					</div>
-				</h4>
-				<div class="pd-table celled">
-					<div class="pd-table-head">
-						<div class="pd-table-row">
-							<div class="pd-table-row-cont">
-								<div class="pd-table-cell-header">ID</div>
-								<div class="pd-table-cell-header">Promise</div>
-								<div class="pd-table-cell-header">Status</div>
-								<div class="pd-table-cell-header">Value</div>
-								<div class="pd-table-cell-header">Chain</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div id="need-reload" hidden>
-				<div class="ui warning message">
-					<!-- <div class="ui segment vertical">
-						<div class="header">
-							Please reload page to capture Promises
-						</div>
-					</div> -->
-					<div class="ui segment vertical">
-						<div class="primary ui button small"
-							role="button"
-							id="reload"
-						>Start Watch & Reload page</div>
+		<div id="main"
+			ui-control="main"
+			ui-template='{
+				"head": "Head",
+				"need-reload": "NeedReload"
+			}'
+		>
+			<div id="head"
+				ui-control="element"
+				ui-name="head"
+			></div>
 
-						<div class="primary ui button small"
-							role="button"
-							id="attach"
-						>Start Watch</div>
-					</div>
-				</div>
-			</div>
-			<div id="content" hidden>
+			<div id="need-reload"
+				ui-control="element"
+				ui-name="need-reload"
+				hidden
+			></div>
+			<div id="content"
+				ui-control="element"
+				ui-name="content"
+				hidden
+			>
 				<div class="pd-table celled" id="promises-table">
 					<div class="pd-table-body tbody-pending" hidden></div>
 					<div class="pd-table-body tbody-errors" hidden></div>
@@ -72,6 +37,7 @@
 				</div>
 			</div>
 		</div>
+
 		<div id="settings" class="pd-dialog" hidden>
 			<div class="ui modal">
 				<i class="close icon"
@@ -81,40 +47,33 @@
 					Settings
 				</div>
 				<div class="content">
-					<div data-control="test"
-						data-template="Test"
-						style="background: yellow; padding: 20px;"
-					>
-						inside
-					</div>
-
-					<div class="ui vertical segment" data-control="settings">
-						<!-- <div><span data-control="checkbox"
-							data-setting="ignore_trailing_promises"
+					<div class="ui vertical segment" ui-control="settings">
+						<!-- <div><span ui-control="checkbox"
+							ui-setting="ignore_trailing_promises"
 						>
 							<label>
 								<input type="checkbox" checked>
 								Ignore trailing promises
 							</label>
 						</span></div> -->
-						<div><span data-control="checkbox"
-							data-setting="show_full_stack"
+						<div><span ui-control="checkbox"
+							ui-setting="show_full_stack"
 						>
 							<label>
 								<input type="checkbox">
 								Show full stack trace
 							</label>
 						</span></div>
-						<!-- <div><span data-control="checkbox"
-							data-setting="console_rejections"
+						<!-- <div><span ui-control="checkbox"
+							ui-setting="console_rejections"
 						>
 							<label>
 								<input type="checkbox" checked>
 								Report rejections to console
 							</label>
 						</span></div> -->
-						<!-- <div><span data-control="checkbox"
-							data-setting="pause_on_caught"
+						<!-- <div><span ui-control="checkbox"
+							ui-setting="pause_on_caught"
 						>
 							<label>
 								<input type="checkbox" checked>

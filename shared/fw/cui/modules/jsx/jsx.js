@@ -8,6 +8,15 @@ var tpls = require('tpls');
     components: {}
   };
 
+  var propsMap = lib.extend(Object.create(null), {
+    'class': 'className',
+    'style': function(domElement, val) {
+      // need special units handling
+      // e.g. width: 10 -> width: '10px'
+      lib.extend(domElement.style, val);
+    }
+  });
+
   var hasOwn = Object.prototype.hasOwnProperty;
   var isArray = Array.isArray;
 
@@ -36,6 +45,25 @@ var tpls = require('tpls');
 
   Element.prototype = Object.create(Node.prototype);
   Component.prototype = Object.create(Node.prototype);
+
+  var handleProp = function(domElement, key, val) {
+    if (key.indexOf(':') !== -1) return;
+
+    if (typeof propsMap[key] === 'function') {
+      propsMap[key](domElement, val);
+      return;
+    }
+
+    if (typeof propsMap[key] === 'string') {
+      key = propsMap[key];
+    }
+
+    if (key in domElement) {
+      domElement[key] = val;
+    } else {
+      domElement.setAttribute(key, val);
+    }
+  };
 
   jsx.tag = function(tag, props, children) {
     var delimiterIndex = tag.indexOf(':');
@@ -108,13 +136,11 @@ var tpls = require('tpls');
         onElement(node, domElement, sendParams);
       }
 
-      lib.each(node.props, function(val, key) {
-        if (key === 'style') {
-          // need special units handling
-          // e.g. width: 10 -> width: '10px'
-          lib.extend(domElement.style, val);
-        } else {
-          domElement[key] = val;
+      lib.each(node.props, function(nsData, ns) {
+        if (ns === '#default') {
+          lib.each(nsData, function(val, key) {
+            handleProp(domElement, key, val);
+          });
         }
       });
 

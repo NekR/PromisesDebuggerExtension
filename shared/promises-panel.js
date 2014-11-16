@@ -1,53 +1,5 @@
 (function() {
-  var reloadButton = document.getElementById('reload'),
-    attachButton = document.getElementById('attach'),
-    clearButton = document.getElementById('clear'),
-    toggleAttach = document.getElementById('toggle-attach'),
-    settingsButton = document.getElementById('settings-button');
-
   var isChrome = typeof chrome !== 'undefined';
-
-  reloadButton.addEventListener('click', function() {
-    sendServiceAction('reload_and_attach');
-    toggleAttach.setAttribute('selected', '');
-  });
-
-  attachButton.addEventListener('click', function() {
-    doAttach();
-  });
-
-  clearButton.addEventListener('click', function() {
-    doClear();
-  });
-
-  toggleAttach.addEventListener('click', function() {
-    var selected = this.hasAttribute('selected');
-
-    if (!selected) {
-      doAttach();
-    } else {
-      doDetach();
-    }
-  });
-
-  settingsButton.addEventListener('click', function() {
-    var settings = document.getElementById('settings');
-
-    settings.hidden = false;
-    settings.querySelector('.close').onclick = function() {
-      this.onclick = null;
-      settings.hidden = true;
-    };
-  });
-
-  var doAttach = function() {
-    sendServiceAction('attach');
-    toggleAttach.setAttribute('selected', '');
-  },
-  doDetach = function() {
-    sendServiceAction('detach');
-    toggleAttach.removeAttribute('selected');
-  };
 
   var createPromiseRow = function() {
     var item = document.createElement('div'),
@@ -207,7 +159,7 @@
     if (name) {
       stackName += ' with ' + name;
     }
-      
+
     var resourceLink = parseAndGerRerouceLink(stackName);
 
     return resourceLink;
@@ -275,24 +227,6 @@
       container.appendChild(child);
     }
   },
-  doClear = function(force) {
-    if (!force) {
-      // stack not used promises for future use
-      Object.keys(promises).forEach(function(key) {
-        var promiseRecord = promisesStash[key] = promises[key];
-
-        promiseRecord.row = null;
-      });
-    } else {
-      promisesStash = {};
-    }
-
-    promises = {};
-
-    [].slice.call(table.querySelectorAll('.pd-table-body')).forEach(function(tbody) {
-      tbody.innerHTML = '';
-    });
-  },
   getTopLevelParent = function(promiseRecord) {
     while (promiseRecord.parent) {
       promiseRecord = promiseRecord.parent;
@@ -322,17 +256,19 @@
       var needReload = document.getElementById('need-reload'),
         content = document.getElementById('content');
 
-      toggleAttach.removeAttribute('selected');
+      PromisesPanel.updateAttach(false);
 
       needReload.hidden = false;
       content.hidden = true;
     },
     show_not_attached: function() {
-      toggleAttach.removeAttribute('selected');
+      PromisesPanel.updateAttach(false);
     },
     show_main: function() {
       var needReload = document.getElementById('need-reload'),
         content = document.getElementById('content');
+
+      PromisesPanel.updateAttach(true);
 
       needReload.hidden = true;
       content.hidden = false;
@@ -345,7 +281,7 @@
       }
     },
     reload: function() {
-      doClear(true);
+      PromisesPanel.doClear(true);
     }
   },
   dataUpdates = {
@@ -696,11 +632,42 @@
   });
 
   window.PromisesPanel = {
+    sendServiceAction: sendServiceAction,
     updateSetting: function(setting, value) {
       var settingsActors = PromisesPanel.settingsActors;
 
       if (settingsActors.hasOwnProperty(setting)) {
         settingsActors[setting](value);
+      }
+    },
+    updateAttach: function(flag) {
+      PromisesPanel.fireEvent('updateAttach', {
+        attached: flag
+      });
+
+      PromisesPanel.data.attached = flag;
+    },
+    doClear: function(force) {
+      if (!force) {
+        // stack not used promises for future use
+        Object.keys(promises).forEach(function(key) {
+          var promiseRecord = promisesStash[key] = promises[key];
+
+          promiseRecord.row = null;
+        });
+      } else {
+        promisesStash = {};
+      }
+
+      promises = {};
+
+      [].slice.call(table.querySelectorAll('.pd-table-body')).forEach(function(tbody) {
+        tbody.innerHTML = '';
+      });
+    },
+    fireEvent: function(event, data) {
+      if (PromisesPanel.onEvent) {
+        PromisesPanel.onEvent(event, data);
       }
     },
     settingsActors: {
@@ -710,6 +677,9 @@
     },
     settings: {
       show_full_stack: false
+    },
+    data: {
+      attached: false
     }
   };
 }());

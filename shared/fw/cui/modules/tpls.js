@@ -1,6 +1,7 @@
 var ui = require('ui');
 var types = require('types');
 var typedCache = types.typedCache;
+var lib = require('lib');
 
 var exports = {
   store: new Map(),
@@ -69,3 +70,7 @@ ui.type.define('tpl', {
     return value;
   }
 });
+
+lib.extend(ui.controls.element.properties, ui.handleProperties({
+  template: 'tpl'
+}));
